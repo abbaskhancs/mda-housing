@@ -8,6 +8,7 @@ const cors_1 = __importDefault(require("cors"));
 const helmet_1 = __importDefault(require("helmet"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const logger_1 = require("./config/logger");
+const auth_1 = __importDefault(require("./routes/auth"));
 // Load environment variables
 dotenv_1.default.config();
 const app = (0, express_1.default)();
@@ -31,6 +32,8 @@ app.get('/health', (req, res) => {
         version: process.env.npm_package_version || '1.0.0'
     });
 });
+// API routes
+app.use('/api/auth', auth_1.default);
 // API routes placeholder
 app.get('/api', (req, res) => {
     res.json({
@@ -59,5 +62,15 @@ app.listen(PORT, () => {
     logger_1.logger.info(`🚀 MDA Housing API server running on port ${PORT}`);
     logger_1.logger.info(`📊 Health check available at http://localhost:${PORT}/health`);
     logger_1.logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+});
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+    logger_1.logger.error('Uncaught Exception:', error);
+    process.exit(1);
+});
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+    logger_1.logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    process.exit(1);
 });
 exports.default = app;

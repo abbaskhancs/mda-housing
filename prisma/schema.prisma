@@ -106,6 +106,25 @@ model WfTransition {
   @@map("wf_transition")
 }
 
+// User Management
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  email     String   @unique
+  password  String
+  role      String   // OWO, BCA, HOUSING, ACCOUNTS, WATER, APPROVER, ADMIN
+  isActive  Boolean  @default(true)
+  lastLogin DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  auditLogs AuditLog[]
+
+  @@map("user")
+}
+
 // Core Business Entities
 
 model Person {
@@ -289,6 +308,7 @@ model AuditLog {
 
   // Relations
   application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id])
 
   @@map("audit_log")
 }

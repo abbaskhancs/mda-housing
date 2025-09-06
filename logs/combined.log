@@ -7,3 +7,35 @@
 {"level":"info","message":"Health check requested","service":"mda-housing-api","timestamp":"2025-09-06T09:51:18.982Z"}
 {"level":"info","message":"Health check requested","service":"mda-housing-api","timestamp":"2025-09-06T09:51:24.273Z"}
 {"level":"info","message":"Health check requested","service":"mda-housing-api","timestamp":"2025-09-06T09:52:43.595Z"}
+{"level":"info","message":"🚀 MDA Housing API server running on port 3001","service":"mda-housing-api","timestamp":"2025-09-06T11:19:51.138Z"}
+{"level":"info","message":"📊 Health check available at http://localhost:3001/health","service":"mda-housing-api","timestamp":"2025-09-06T11:19:51.149Z"}
+{"level":"info","message":"🌍 Environment: development","service":"mda-housing-api","timestamp":"2025-09-06T11:19:51.150Z"}
+{"level":"info","message":"🚀 MDA Housing API server running on port 3001","service":"mda-housing-api","timestamp":"2025-09-06T11:22:37.477Z"}
+{"level":"info","message":"📊 Health check available at http://localhost:3001/health","service":"mda-housing-api","timestamp":"2025-09-06T11:22:37.488Z"}
+{"level":"info","message":"🌍 Environment: development","service":"mda-housing-api","timestamp":"2025-09-06T11:22:37.489Z"}
+{"level":"error","message":"Login error: JWT_SECRET not configured","service":"mda-housing-api","stack":"Error: JWT_SECRET not configured\n    at generateToken (C:\\Abbas\\Coding\\MDA_Housing\\dist\\routes\\auth.js:37:15)\n    at C:\\Abbas\\Coding\\MDA_Housing\\dist\\routes\\auth.js:88:23","timestamp":"2025-09-06T11:22:39.279Z"}
+{"level":"info","message":"🚀 MDA Housing API server running on port 3001","service":"mda-housing-api","timestamp":"2025-09-06T11:23:33.414Z"}
+{"level":"info","message":"📊 Health check available at http://localhost:3001/health","service":"mda-housing-api","timestamp":"2025-09-06T11:23:33.424Z"}
+{"level":"info","message":"🌍 Environment: development","service":"mda-housing-api","timestamp":"2025-09-06T11:23:33.426Z"}
+{"level":"error","message":"Login error: JWT_SECRET not configured","service":"mda-housing-api","stack":"Error: JWT_SECRET not configured\n    at generateToken (C:\\Abbas\\Coding\\MDA_Housing\\dist\\routes\\auth.js:37:15)\n    at C:\\Abbas\\Coding\\MDA_Housing\\dist\\routes\\auth.js:88:23","timestamp":"2025-09-06T11:23:46.026Z"}
+{"level":"info","message":"🚀 MDA Housing API server running on port 3001","service":"mda-housing-api","timestamp":"2025-09-06T11:24:42.419Z"}
+{"level":"info","message":"📊 Health check available at http://localhost:3001/health","service":"mda-housing-api","timestamp":"2025-09-06T11:24:42.425Z"}
+{"level":"info","message":"🌍 Environment: development","service":"mda-housing-api","timestamp":"2025-09-06T11:24:42.429Z"}
+{"level":"error","message":"Login error: JWT_SECRET not configured","service":"mda-housing-api","stack":"Error: JWT_SECRET not configured\n    at generateToken (C:\\Abbas\\Coding\\MDA_Housing\\dist\\routes\\auth.js:37:15)\n    at C:\\Abbas\\Coding\\MDA_Housing\\dist\\routes\\auth.js:91:23","timestamp":"2025-09-06T11:24:45.932Z"}
+{"level":"info","message":"Health check requested","service":"mda-housing-api","timestamp":"2025-09-06T11:25:01.805Z"}
+{"level":"info","message":"🚀 MDA Housing API server running on port 3001","service":"mda-housing-api","timestamp":"2025-09-06T11:25:20.432Z"}
+{"level":"info","message":"📊 Health check available at http://localhost:3001/health","service":"mda-housing-api","timestamp":"2025-09-06T11:25:20.439Z"}
+{"level":"info","message":"🌍 Environment: development","service":"mda-housing-api","timestamp":"2025-09-06T11:25:20.446Z"}
+{"level":"info","message":"🚀 MDA Housing API server running on port 3001","service":"mda-housing-api","timestamp":"2025-09-06T11:25:44.481Z"}
+{"level":"info","message":"📊 Health check available at http://localhost:3001/health","service":"mda-housing-api","timestamp":"2025-09-06T11:25:44.488Z"}
+{"level":"info","message":"🌍 Environment: development","service":"mda-housing-api","timestamp":"2025-09-06T11:25:44.489Z"}
+{"level":"info","message":"🚀 MDA Housing API server running on port 3001","service":"mda-housing-api","timestamp":"2025-09-06T11:30:54.666Z"}
+{"level":"info","message":"📊 Health check available at http://localhost:3001/health","service":"mda-housing-api","timestamp":"2025-09-06T11:30:54.682Z"}
+{"level":"info","message":"🌍 Environment: development","service":"mda-housing-api","timestamp":"2025-09-06T11:30:54.685Z"}
+{"level":"info","message":"🚀 MDA Housing API server running on port 3001","service":"mda-housing-api","timestamp":"2025-09-06T11:32:19.315Z"}
+{"level":"info","message":"📊 Health check available at http://localhost:3001/health","service":"mda-housing-api","timestamp":"2025-09-06T11:32:19.327Z"}
+{"level":"info","message":"🌍 Environment: development","service":"mda-housing-api","timestamp":"2025-09-06T11:32:19.328Z"}
+{"level":"info","message":"Health check requested","service":"mda-housing-api","timestamp":"2025-09-06T11:32:22.883Z"}
+{"level":"info","message":"🚀 MDA Housing API server running on port 3001","service":"mda-housing-api","timestamp":"2025-09-06T11:33:13.881Z"}
+{"level":"info","message":"📊 Health check available at http://localhost:3001/health","service":"mda-housing-api","timestamp":"2025-09-06T11:33:13.918Z"}
+{"level":"info","message":"🌍 Environment: development","service":"mda-housing-api","timestamp":"2025-09-06T11:33:13.946Z"}

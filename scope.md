@@ -70,7 +70,7 @@ Milestone 1.2: `prisma db seed` populates lookups and demo rows. ✅ COMPLETED (
 
 
 ### Phase 2 – Backend Core (2 days)
-1. Auth & RBAC: JWT middleware, role checks; demo users.
+1. ✅ Auth & RBAC: JWT middleware, role checks; demo users.
 2. Validation: Zod schemas per endpoint; centralized error handler.
 3. Guards: implement `GUARDS` map as per spec; unit tests for each.
 4. Generic transition handler `/api/applications/:id/transition` with transaction + `AuditLog`.
