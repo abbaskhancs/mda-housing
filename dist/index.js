@@ -8,7 +8,10 @@ const cors_1 = __importDefault(require("cors"));
 const helmet_1 = __importDefault(require("helmet"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const logger_1 = require("./config/logger");
+const errorHandler_1 = require("./middleware/errorHandler");
 const auth_1 = __importDefault(require("./routes/auth"));
+const applications_1 = __importDefault(require("./routes/applications"));
+const workflow_1 = __importDefault(require("./routes/workflow"));
 // Load environment variables
 dotenv_1.default.config();
 const app = (0, express_1.default)();
@@ -34,6 +37,8 @@ app.get('/health', (req, res) => {
 });
 // API routes
 app.use('/api/auth', auth_1.default);
+app.use('/api/applications', applications_1.default);
+app.use('/api/workflow', workflow_1.default);
 // API routes placeholder
 app.get('/api', (req, res) => {
     res.json({
@@ -49,14 +54,8 @@ app.use('*', (req, res) => {
         path: req.originalUrl
     });
 });
-// Error handler
-app.use((err, req, res, next) => {
-    logger_1.logger.error('Unhandled error:', err);
-    res.status(500).json({
-        error: 'Internal server error',
-        message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
-    });
-});
+// Centralized error handler
+app.use(errorHandler_1.errorHandler);
 // Start server
 app.listen(PORT, () => {
     logger_1.logger.info(`🚀 MDA Housing API server running on port ${PORT}`);

@@ -71,8 +71,8 @@ Milestone 1.2: `prisma db seed` populates lookups and demo rows. ✅ COMPLETED (
 
 ### Phase 2 – Backend Core (2 days)
 1. ✅ Auth & RBAC: JWT middleware, role checks; demo users.
-2. Validation: Zod schemas per endpoint; centralized error handler.
-3. Guards: implement `GUARDS` map as per spec; unit tests for each.
+2. ✅ Validation: Zod schemas per endpoint; centralized error handler.
+3. ✅ Guards: implement `GUARDS` map as per spec; unit tests for each.
 4. Generic transition handler `/api/applications/:id/transition` with transaction + `AuditLog`.
 5. Applications intake `POST /api/applications` with attachments (multer), S3/MinIO upload, receipt creation (async job OK, but record URL if ready).
 6. Clearances `POST /api/applications/:id/clearances` with auto‑progress logic for BCA/Housing.
@@ -80,19 +80,7 @@ Milestone 1.2: `prisma db seed` populates lookups and demo rows. ✅ COMPLETED (
 8. Reviews endpoint: insert review rows and optional auto‑transition.
 9. Deed endpoints: draft, finalize (hash + owner flip in same transaction).
 10. Lookups endpoints including `transitions?from=<stage>` with dry‑run guards.
-11. (Moved from Phase 0, to run only after demo acceptance) Developer Dockerization:
 
-Add docker-compose.dev.yml for Postgres 16 + MinIO with named volumes.
-
-Provide .env.docker.example and overlay env loading in README.
-
-Add Makefile targets: make up, make down, make logs, make psql, make mc.
-
-Healthchecks for DB/MinIO; wait-for scripts in scripts/.
-
-Ensure Prisma points to container DB via env; MinIO creds from env.
-
-Milestone 2.D: docker compose -f docker-compose.dev.yml up brings DB/MinIO; API healthcheck 200.
 
 Milestone 2.1: All endpoints respond with mocked auth; Postman collection green.
 Milestone 2.2: Guard unit tests pass; sample flow executes end‑to‑end via API.
@@ -118,6 +106,19 @@ Milestone 3.1: Each template renders with sample data and saves to MinIO.
 Milestone 4.1: Create new application and navigate to case file.
 Milestone 4.2: Full flow click‑through in UI moves stages correctly.
 
+Phase 4.5 – Developer Dockerization (0.5 day; runs after Phase 4, before Phase 5)
+
+Add docker-compose.dev.yml for Postgres 16 + MinIO with named volumes.
+
+Provide .env.docker.example and overlay env loading in README.
+
+Add Makefile targets: make up, make down, make logs, make psql, make mc.
+
+Healthchecks for DB/MinIO; wait-for scripts in scripts/.
+
+Ensure Prisma points to container DB via env; MinIO creds from env.
+
+Milestone 4.5.D: docker compose -f docker-compose.dev.yml up brings DB/MinIO; API healthcheck 200.
 
 ### Phase 5 – Security Foundations (ongoing, 0.5–1 day)
 1. CSRF protection for state‑changing routes (frontend + backend).
@@ -147,7 +148,7 @@ Milestone 6.1: Demo script runs in 15 minutes; team can operate the flow.
 1. Phase 0 scaffolding and local Postgres/MinIO (no Docker).
 2. Phase 1 Prisma schema + seed.
 3. Verify transitions and guards with a Postman flow before UI.
-4. After demo acceptance → run Phase 2 step 11 to enable Dockerized dev stack.
+4. After completing Phase 4 → run Phase 4.5 (Developer Dockerization) to enable the Dockerized dev stack.
 
 ## Post‑MVP (Phase‑2)
 - RLS policies; KMS‑managed keys; PITR backups.

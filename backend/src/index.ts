@@ -3,7 +3,10 @@ import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 import { logger } from './config/logger';
+import { errorHandler } from './middleware/errorHandler';
 import authRoutes from './routes/auth';
+import applicationRoutes from './routes/applications';
+import workflowRoutes from './routes/workflow';
 
 // Load environment variables
 dotenv.config();
@@ -34,6 +37,8 @@ app.get('/health', (req, res) => {
 
 // API routes
 app.use('/api/auth', authRoutes);
+app.use('/api/applications', applicationRoutes);
+app.use('/api/workflow', workflowRoutes);
 
 // API routes placeholder
 app.get('/api', (req, res) => {
@@ -52,14 +57,8 @@ app.use('*', (req, res) => {
   });
 });
 
-// Error handler
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  logger.error('Unhandled error:', err);
-  res.status(500).json({
-    error: 'Internal server error',
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
-  });
-});
+// Centralized error handler
+app.use(errorHandler);
 
 // Start server
 app.listen(PORT, () => {
