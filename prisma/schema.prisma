@@ -190,6 +190,7 @@ model Application {
   accountsBreakdown AccountsBreakdown?
   reviews          Review[]
   transferDeed     TransferDeed?
+  documents        Document[]
   auditLogs        AuditLog[]
 
   @@map("application")
@@ -292,6 +293,29 @@ model TransferDeed {
   witness2    Person      @relation("TransferDeedWitness2", fields: [witness2Id], references: [id])
 
   @@map("transfer_deed")
+}
+
+model Document {
+  id            String   @id @default(cuid())
+  applicationId String
+  documentType  String   // INTAKE_RECEIPT, BCA_CLEARANCE, HOUSING_CLEARANCE, CHALLAN, DISPATCH_MEMO, TRANSFER_DEED
+  fileName      String
+  originalName  String
+  fileSize      Int
+  mimeType      String   @default("application/pdf")
+  storageUrl    String   // MinIO/S3 URL
+  hashSha256    String   // File content hash
+  signedUrl     String?  // Pre-signed download URL
+  expiresAt     DateTime? // URL expiration
+  generatedAt   DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@unique([applicationId, documentType])
+  @@map("document")
 }
 
 model AuditLog {

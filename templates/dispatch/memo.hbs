@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="ur" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ڈسپیچ میمو - ہاؤسنگ آفیسر</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Nastaliq Urdu', serif;
+            direction: rtl;
+            text-align: right;
+            line-height: 1.6;
+            color: #333;
+            background: white;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #2c5aa0;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #2c5aa0;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        .header h2 {
+            color: #666;
+            font-size: 20px;
+            font-weight: 400;
+        }
+        
+        .memo-info {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .memo-info h3 {
+            color: #2c5aa0;
+            font-size: 18px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 8px;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px dotted #ccc;
+        }
+        
+        .info-label {
+            font-weight: 700;
+            color: #495057;
+            min-width: 120px;
+        }
+        
+        .info-value {
+            color: #212529;
+            text-align: left;
+        }
+        
+        .application-details {
+            background: white;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .application-details h3 {
+            color: #2c5aa0;
+            font-size: 18px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 8px;
+        }
+        
+        .clearances-section {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .clearances-section h4 {
+            color: #495057;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        
+        .clearance-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px dotted #ccc;
+        }
+        
+        .clearance-item:last-child {
+            border-bottom: none;
+        }
+        
+        .clearance-status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        
+        .status-clear {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-objection {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .attachments-section {
+            background: #e9ecef;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .attachments-section h4 {
+            color: #495057;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        
+        .attachment-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            border-bottom: 1px dotted #ccc;
+        }
+        
+        .attachment-item:last-child {
+            border-bottom: none;
+        }
+        
+        .reviews-section {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .reviews-section h4 {
+            color: #0c5460;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        
+        .review-item {
+            background: white;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 8px 0;
+            border-left: 4px solid #17a2b8;
+        }
+        
+        .review-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        
+        .memo-content {
+            background: white;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .memo-content h3 {
+            color: #2c5aa0;
+            font-size: 18px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 8px;
+        }
+        
+        .memo-text {
+            line-height: 1.8;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+        
+        .action-required {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .action-required h4 {
+            color: #856404;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        
+        .signature-section {
+            margin-top: 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+        
+        .signature-box {
+            text-align: center;
+            border-top: 1px solid #333;
+            padding-top: 10px;
+            min-width: 150px;
+        }
+        
+        .signature-box h4 {
+            color: #2c5aa0;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        
+        .signature-box p {
+            color: #666;
+            font-size: 12px;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            text-align: center;
+            border-top: 2px solid #e9ecef;
+            padding-top: 20px;
+        }
+        
+        .footer p {
+            color: #6c757d;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        .qr-code {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        
+        @media print {
+            body {
+                padding: 0;
+            }
+            
+            .header, .memo-info, .application-details, .memo-content, .footer {
+                break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>محکمہ ہاؤسنگ</h1>
+        <h2>ڈسپیچ میمو - ہاؤسنگ آفیسر</h2>
+    </div>
+    
+    <div class="memo-info">
+        <h3>میمو کی تفصیلات</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">میمو نمبر:</span>
+                <span class="info-value">{{memoId}}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">تاریخ:</span>
+                <span class="info-value">{{formatDate memoDate}}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">درخواست نمبر:</span>
+                <span class="info-value">{{application.id}}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">موجودہ مرحلہ:</span>
+                <span class="info-value">{{application.currentStage}}</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="application-details">
+        <h3>درخواست کی تفصیلات</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">درخواست کنندہ:</span>
+                <span class="info-value">{{application.applicantName}}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">فون نمبر:</span>
+                <span class="info-value">{{application.applicantPhone}}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">پلاٹ نمبر:</span>
+                <span class="info-value">{{plot.plotNumber}}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">بلاک:</span>
+                <span class="info-value">{{plot.block}}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">سکشن:</span>
+                <span class="info-value">{{plot.section}}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">سائز:</span>
+                <span class="info-value">{{plot.size}} مرلہ</span>
+            </div>
+        </div>
+        
+        {{#if clearances}}
+        <div class="clearances-section">
+            <h4>کلیرنس کی حالت</h4>
+            {{#each clearances}}
+            <div class="clearance-item">
+                <span>{{this.sectionName}}</span>
+                <span class="clearance-status status-{{this.status}}">
+                    {{getStatusText this.status}}
+                </span>
+            </div>
+            {{/each}}
+        </div>
+        {{/if}}
+        
+        {{#if attachments}}
+        <div class="attachments-section">
+            <h4>منسلک دستاویزات</h4>
+            {{#each attachments}}
+            <div class="attachment-item">
+                <span>{{getDocTypeText this.docType}}</span>
+                <span>{{#if this.originalSeen}}✓ اصلی دیکھا گیا{{else}}✗ اصلی نہیں دیکھا{{/if}}</span>
+            </div>
+            {{/each}}
+        </div>
+        {{/if}}
+        
+        {{#if reviews}}
+        <div class="reviews-section">
+            <h4>جائزے</h4>
+            {{#each reviews}}
+            <div class="review-item">
+                <div class="review-meta">
+                    <span>{{this.reviewerName}}</span>
+                    <span>{{formatDate this.createdAt}}</span>
+                </div>
+                <p>{{this.comments}}</p>
+            </div>
+            {{/each}}
+        </div>
+        {{/if}}
+    </div>
+    
+    <div class="memo-content">
+        <h3>میمو</h3>
+        <div class="memo-text">
+            <p>محترم ہاؤسنگ آفیسر،</p>
+            <p>درخواست نمبر <strong>{{application.id}}</strong> برائے منتقلی پلاٹ نمبر <strong>{{plot.plotNumber}}</strong> کی درخواست تمام ضروری کلیرنس حاصل کرنے کے بعد آپ کے جائزے کے لیے پیش کی جا رہی ہے۔</p>
+            
+            <p>درخواست میں مندرجہ ذیل دستاویزات شامل ہیں:</p>
+            <ul>
+                {{#each attachments}}
+                <li>{{getDocTypeText this.docType}} - {{#if this.originalSeen}}اصل دیکھا گیا{{else}}اصل نہیں دیکھا{{/if}}</li>
+                {{/each}}
+            </ul>
+            
+            <p>برائے کرم درخواست کا جائزہ لے کر فیصلہ کریں کہ آیا منتقلی کا عمل جاری رکھا جا سکتا ہے یا کوئی اضافی کارروائی درکار ہے۔</p>
+        </div>
+        
+        <div class="action-required">
+            <h4>مطلوبہ کارروائی</h4>
+            <p>درخواست کا جائزہ لے کر فیصلہ کریں:</p>
+            <ul>
+                <li>منتقلی کی منظوری</li>
+                <li>اضافی دستاویزات کی درخواست</li>
+                <li>مزید تحقیق کی ضرورت</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="signature-section">
+        <div class="signature-box">
+            <h4>ڈسپیچ افسر</h4>
+            <p>دستخط</p>
+        </div>
+        <div class="signature-box">
+            <h4>تاریخ</h4>
+            <p>{{formatDate memoDate}}</p>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p>یہ میمو ہاؤسنگ آفیسر کو بھیجا گیا ہے</p>
+        <p>درخواست نمبر: {{application.id}} | میمو نمبر: {{memoId}}</p>
+        <div class="qr-code">
+            {{#if qrCodeDataURL}}
+            <img src="{{qrCodeDataURL}}" alt="QR Code" style="width: 100%; height: 100%; object-fit: contain;">
+            {{else}}
+            QR Code<br>
+            {{application.id}}
+            {{/if}}
+        </div>
+    </div>
+</body>
+</html>

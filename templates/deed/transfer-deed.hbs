@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="ur" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منتقلی نامہ - ٹرانسفر ڈیڈ</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Nastaliq Urdu', serif;
+            direction: rtl;
+            text-align: right;
+            line-height: 1.8;
+            color: #333;
+            background: white;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #2c5aa0;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #2c5aa0;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        .header h2 {
+            color: #666;
+            font-size: 20px;
+            font-weight: 400;
+        }
+        
+        .deed-info {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .deed-info h3 {
+            color: #2c5aa0;
+            font-size: 18px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 8px;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px dotted #ccc;
+        }
+        
+        .info-label {
+            font-weight: 700;
+            color: #495057;
+            min-width: 120px;
+        }
+        
+        .info-value {
+            color: #212529;
+            text-align: left;
+        }
+        
+        .deed-content {
+            background: white;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 30px;
+            margin-bottom: 30px;
+            line-height: 2;
+        }
+        
+        .deed-content h3 {
+            color: #2c5aa0;
+            font-size: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+            border-bottom: 2px solid #2c5aa0;
+            padding-bottom: 10px;
+        }
+        
+        .deed-paragraph {
+            margin-bottom: 20px;
+            text-align: justify;
+            font-size: 16px;
+        }
+        
+        .deed-paragraph strong {
+            color: #2c5aa0;
+            font-weight: 700;
+        }
+        
+        .parties-section {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .parties-section h4 {
+            color: #2c5aa0;
+            font-size: 18px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .party-info {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        
+        .party-info h5 {
+            color: #495057;
+            font-size: 16px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #e9ecef;
+            padding-bottom: 5px;
+        }
+        
+        .property-details {
+            background: #e9ecef;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .property-details h4 {
+            color: #2c5aa0;
+            font-size: 18px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .property-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .consideration-section {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .consideration-section h4 {
+            color: #856404;
+            font-size: 18px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .witnesses-section {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .witnesses-section h4 {
+            color: #0c5460;
+            font-size: 18px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .witness-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .witness-info {
+            background: white;
+            border: 1px solid #bee5eb;
+            border-radius: 4px;
+            padding: 15px;
+        }
+        
+        .witness-info h5 {
+            color: #0c5460;
+            font-size: 16px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .signatures-section {
+            margin-top: 40px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 30px;
+        }
+        
+        .signature-box {
+            text-align: center;
+            border-top: 2px solid #333;
+            padding-top: 15px;
+            min-height: 100px;
+        }
+        
+        .signature-box h4 {
+            color: #2c5aa0;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        
+        .signature-box p {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        
+        .signature-space {
+            height: 50px;
+            border-bottom: 1px solid #ccc;
+            margin: 10px 0;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            text-align: center;
+            border-top: 2px solid #e9ecef;
+            padding-top: 20px;
+        }
+        
+        .footer p {
+            color: #6c757d;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        .qr-code {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        
+        .deed-status {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 10px;
+            border-radius: 6px;
+            margin: 15px 0;
+            text-align: center;
+            font-weight: 700;
+        }
+        
+        .deed-draft {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        
+        .deed-finalized {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        @media print {
+            body {
+                padding: 0;
+            }
+            
+            .header, .deed-info, .deed-content, .footer {
+                break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>محکمہ ہاؤسنگ</h1>
+        <h2>منتقلی نامہ - ٹرانسفر ڈیڈ</h2>
+    </div>
+    
+    <div class="deed-info">
+        <h3>ڈیڈ کی تفصیلات</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">ڈیڈ نمبر:</span>
+                <span class="info-value">{{transferDeed.id}}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">تاریخ:</span>
+                <span class="info-value">{{formatDate transferDeed.createdAt}}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">درخواست نمبر:</span>
+                <span class="info-value">{{application.id}}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">حالت:</span>
+                <span class="info-value">
+                    <span class="deed-status deed-{{transferDeed.status}}">
+                        {{#if transferDeed.isFinalized}}حتمی{{else}}مسودہ{{/if}}
+                    </span>
+                </span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="deed-content">
+        <h3>منتقلی نامہ</h3>
+        
+        <div class="deed-paragraph">
+            <strong>بسم اللہ الرحمن الرحیم</strong>
+        </div>
+        
+        <div class="deed-paragraph">
+            یہ منتقلی نامہ <strong>{{formatDate transferDeed.createdAt}}</strong> کو <strong>{{transferDeed.sellerName}}</strong> (فروخت کنندہ) اور <strong>{{transferDeed.buyerName}}</strong> (خریدار) کے درمیان طے پایا۔
+        </div>
+        
+        <div class="parties-section">
+            <h4>فریقین کی تفصیلات</h4>
+            
+            <div class="party-info">
+                <h5>فروخت کنندہ (Seller)</h5>
+                <p><strong>نام:</strong> {{transferDeed.sellerName}}</p>
+                <p><strong>والد کا نام:</strong> {{transferDeed.sellerFatherName}}</p>
+                <p><strong>شناختی کارڈ نمبر:</strong> {{transferDeed.sellerCnic}}</p>
+                <p><strong>پتہ:</strong> {{transferDeed.sellerAddress}}</p>
+            </div>
+            
+            <div class="party-info">
+                <h5>خریدار (Buyer)</h5>
+                <p><strong>نام:</strong> {{transferDeed.buyerName}}</p>
+                <p><strong>والد کا نام:</strong> {{transferDeed.buyerFatherName}}</p>
+                <p><strong>شناختی کارڈ نمبر:</strong> {{transferDeed.buyerCnic}}</p>
+                <p><strong>پتہ:</strong> {{transferDeed.buyerAddress}}</p>
+            </div>
+        </div>
+        
+        <div class="property-details">
+            <h4>جائیداد کی تفصیلات</h4>
+            <div class="property-grid">
+                <div class="info-item">
+                    <span class="info-label">پلاٹ نمبر:</span>
+                    <span class="info-value">{{plot.plotNumber}}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">بلاک:</span>
+                    <span class="info-value">{{plot.block}}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">سکشن:</span>
+                    <span class="info-value">{{plot.section}}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">سائز:</span>
+                    <span class="info-value">{{plot.size}} مرلہ</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="consideration-section">
+            <h4>قیمت اور شرائط</h4>
+            <p><strong>قیمت:</strong> {{formatCurrency transferDeed.considerationAmount}} ({{transferDeed.considerationAmountInWords}})</p>
+            <p><strong>ادائیگی:</strong> {{transferDeed.paymentTerms}}</p>
+            <p><strong>اضافی شرائط:</strong> {{transferDeed.additionalTerms}}</p>
+        </div>
+        
+        <div class="deed-paragraph">
+            <strong>فروخت کنندہ</strong> اپنی مرضی اور خوشی سے مذکورہ بالا جائیداد <strong>خریدار</strong> کو فروخت کرتا ہے اور <strong>خریدار</strong> اسے خریدنے پر راضی ہے۔
+        </div>
+        
+        <div class="deed-paragraph">
+            دونوں فریقین اس بات پر متفق ہیں کہ یہ منتقلی نامہ قانونی طور پر قابل عمل ہے اور دونوں اطراف اس کی پابندی کریں گے۔
+        </div>
+        
+        {{#if witness1}}
+        <div class="witnesses-section">
+            <h4>گواہان</h4>
+            <div class="witness-grid">
+                <div class="witness-info">
+                    <h5>گواہ نمبر 1</h5>
+                    <p><strong>نام:</strong> {{witness1.name}}</p>
+                    <p><strong>والد کا نام:</strong> {{witness1.fatherName}}</p>
+                    <p><strong>شناختی کارڈ نمبر:</strong> {{witness1.cnic}}</p>
+                </div>
+                {{#if witness2}}
+                <div class="witness-info">
+                    <h5>گواہ نمبر 2</h5>
+                    <p><strong>نام:</strong> {{witness2.name}}</p>
+                    <p><strong>والد کا نام:</strong> {{witness2.fatherName}}</p>
+                    <p><strong>شناختی کارڈ نمبر:</strong> {{witness2.cnic}}</p>
+                </div>
+                {{/if}}
+            </div>
+        </div>
+        {{/if}}
+        
+        <div class="deed-paragraph">
+            <strong>تاریخ:</strong> {{formatDate transferDeed.createdAt}}
+        </div>
+        
+        <div class="deed-paragraph">
+            <strong>جگہ:</strong> {{transferDeed.executionPlace}}
+        </div>
+    </div>
+    
+    <div class="signatures-section">
+        <div class="signature-box">
+            <h4>فروخت کنندہ</h4>
+            <p>{{transferDeed.sellerName}}</p>
+            <div class="signature-space"></div>
+            <p>دستخط</p>
+        </div>
+        
+        <div class="signature-box">
+            <h4>خریدار</h4>
+            <p>{{transferDeed.buyerName}}</p>
+            <div class="signature-space"></div>
+            <p>دستخط</p>
+        </div>
+        
+        <div class="signature-box">
+            <h4>گواہ</h4>
+            {{#if witness1}}
+            <p>{{witness1.name}}</p>
+            {{else}}
+            <p>گواہ</p>
+            {{/if}}
+            <div class="signature-space"></div>
+            <p>دستخط</p>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p>یہ منتقلی نامہ محکمہ ہاؤسنگ کی نگرانی میں تیار کیا گیا ہے</p>
+        <p>ڈیڈ نمبر: {{transferDeed.id}} | درخواست نمبر: {{application.id}}</p>
+        {{#if transferDeed.isFinalized}}
+        <p><strong>ڈیڈ ہیش:</strong> {{transferDeed.hashSha256}}</p>
+        {{/if}}
+        <div class="qr-code">
+            {{#if qrCodeDataURL}}
+            <img src="{{qrCodeDataURL}}" alt="QR Code" style="width: 100%; height: 100%; object-fit: contain;">
+            {{else}}
+            QR Code<br>
+            {{application.id}}
+            {{/if}}
+        </div>
+    </div>
+</body>
+</html>

@@ -86,10 +86,16 @@ Milestone 2.1: ✅ All endpoints respond with mocked auth; Postman collection gr
 Milestone 2.2: ✅ Guard unit tests pass; sample flow executes end‑to‑end via API.
 
 
-### Phase 3 – Documents & Storage (1 day)
-1. Handlebars templates for: Intake Receipt, BCA/Housing Clearance, Challan, Dispatch Memo, Transfer Deed.
-2. PDF rendering with Puppeteer, font embedding, page headers/footers with QR.
-3. Signed download routes; store only URLs + hashes in DB.
+### Phase 3 – Documents & Storage (1 day) ✅ COMPLETED
+1. ✅ Handlebars templates for: Intake Receipt, BCA/Housing Clearance, Challan, Dispatch Memo, Transfer Deed.
+2. ✅ PDF rendering with Puppeteer, font embedding, page headers/footers with QR.
+3. ✅ Signed download routes; store only URLs + hashes in DB.
+   - ✅ File system storage implementation (fallback for MinIO)
+   - ✅ URL signing with HMAC-SHA256
+   - ✅ Signature verification and expiration handling
+   - ✅ Document generation and storage workflow
+   - ✅ Database integration for document metadata
+   - ✅ RESTful API endpoints for document management
 
 Milestone 3.1: Each template renders with sample data and saves to MinIO.
 

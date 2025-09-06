@@ -2,11 +2,14 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
+import path from 'path';
 import { logger } from './config/logger';
 import { errorHandler } from './middleware/errorHandler';
 import authRoutes from './routes/auth';
 import applicationRoutes from './routes/applications';
 import workflowRoutes from './routes/workflow';
+import pdfRoutes from './routes/pdf';
+import documentRoutes from './routes/documents';
 
 // Load environment variables
 dotenv.config();
@@ -35,10 +38,15 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Static file serving for storage
+app.use('/storage', express.static(path.join(process.cwd(), 'storage')));
+
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/applications', applicationRoutes);
 app.use('/api/workflow', workflowRoutes);
+app.use('/api/pdf', pdfRoutes);
+app.use('/api/documents', documentRoutes);
 
 // API routes placeholder
 app.get('/api', (req, res) => {
