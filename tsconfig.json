@@ -12,12 +12,12 @@
     "resolveJsonModule": true,
     "declaration": true,
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": "./backend/src",
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src/**/*"],
+  "include": ["backend/src/**/*"],
   "exclude": ["node_modules", "dist", "**/*.test.ts"]
 }

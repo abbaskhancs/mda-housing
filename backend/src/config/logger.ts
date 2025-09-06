@@ -37,4 +37,4 @@ if (!fs.existsSync(logsDir)) {
   fs.mkdirSync(logsDir, { recursive: true });
 }
 
-export default logger;
+export { logger };

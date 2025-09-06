@@ -51,7 +51,7 @@ Local Postgres and MinIO installed natively (no Docker) for the demo; can be swa
 3. Create `.env.example` for API, DB, MinIO, JWT, PDF. (Completed)
 4. Set up Postgres + MinIO locally (native installs) for dev; document start/stop commands in README (no Docker in Phase 0). (Completed)
 
-Milestone 0.1: Local Postgres/MinIO running; API boots and returns 200 on health.
+Milestone 0.1: Local Postgres/MinIO running; API boots and returns 200 on health. (Completed)
 
 
 ### Phase 1 – Data Model & Seed (1 day)
