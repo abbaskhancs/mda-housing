@@ -84,3 +84,7 @@ export declare const getAvailableGuards: () => string[];
  * Validate guard context
  */
 export declare const validateGuardContext: (context: GuardContext) => boolean;
+/**
+ * Get guard description by name
+ */
+export declare const getGuardDescription: (guardName: string) => string;

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateGuardContext = exports.getAvailableGuards = exports.executeGuard = exports.GUARDS = exports.GUARD_DEED_FINALIZED = exports.GUARD_APPROVAL_REJECTED = exports.GUARD_APPROVAL_COMPLETE = exports.GUARD_PAYMENT_VERIFIED = exports.GUARD_ACCOUNTS_CALCULATED = exports.GUARD_HOUSING_RESOLVED = exports.GUARD_BCA_RESOLVED = exports.GUARD_CLEARANCES_COMPLETE = exports.GUARD_HOUSING_OBJECTION = exports.GUARD_HOUSING_CLEAR = exports.GUARD_BCA_OBJECTION = exports.GUARD_BCA_CLEAR = exports.GUARD_SCRUTINY_COMPLETE = exports.GUARD_INTAKE_COMPLETE = void 0;
+exports.getGuardDescription = exports.validateGuardContext = exports.getAvailableGuards = exports.executeGuard = exports.GUARDS = exports.GUARD_DEED_FINALIZED = exports.GUARD_APPROVAL_REJECTED = exports.GUARD_APPROVAL_COMPLETE = exports.GUARD_PAYMENT_VERIFIED = exports.GUARD_ACCOUNTS_CALCULATED = exports.GUARD_HOUSING_RESOLVED = exports.GUARD_BCA_RESOLVED = exports.GUARD_CLEARANCES_COMPLETE = exports.GUARD_HOUSING_OBJECTION = exports.GUARD_HOUSING_CLEAR = exports.GUARD_BCA_OBJECTION = exports.GUARD_BCA_CLEAR = exports.GUARD_SCRUTINY_COMPLETE = exports.GUARD_INTAKE_COMPLETE = void 0;
 const client_1 = require("@prisma/client");
 const logger_1 = require("../config/logger");
 const prisma = new client_1.PrismaClient();
@@ -758,3 +758,26 @@ const validateGuardContext = (context) => {
         context.toStageId);
 };
 exports.validateGuardContext = validateGuardContext;
+/**
+ * Get guard description by name
+ */
+const getGuardDescription = (guardName) => {
+    const descriptions = {
+        'GUARD_INTAKE_COMPLETE': 'Check if all required documents are uploaded and marked as original seen',
+        'GUARD_SCRUTINY_COMPLETE': 'Check if OWO has completed initial scrutiny',
+        'GUARD_BCA_CLEAR': 'Check if BCA clearance is obtained',
+        'GUARD_BCA_OBJECTION': 'Check if BCA has raised an objection',
+        'GUARD_HOUSING_CLEAR': 'Check if Housing clearance is obtained',
+        'GUARD_HOUSING_OBJECTION': 'Check if Housing has raised an objection',
+        'GUARD_CLEARANCES_COMPLETE': 'Check if both BCA and Housing clearances are obtained',
+        'GUARD_BCA_RESOLVED': 'Check if BCA objection has been resolved',
+        'GUARD_HOUSING_RESOLVED': 'Check if Housing objection has been resolved',
+        'GUARD_ACCOUNTS_CALCULATED': 'Check if accounts breakdown has been calculated',
+        'GUARD_PAYMENT_VERIFIED': 'Check if payment has been verified',
+        'GUARD_APPROVAL_COMPLETE': 'Check if approval has been completed',
+        'GUARD_APPROVAL_REJECTED': 'Check if approval has been rejected',
+        'GUARD_DEED_FINALIZED': 'Check if transfer deed has been finalized'
+    };
+    return descriptions[guardName] || 'No description available';
+};
+exports.getGuardDescription = getGuardDescription;

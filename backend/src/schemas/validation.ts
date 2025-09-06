@@ -234,7 +234,9 @@ export const transferDeedSchemas = {
 export const workflowSchemas = {
   getTransitions: z.object({
     from: z.string().min(1, 'From stage is required').optional(),
-    to: z.string().min(1, 'To stage is required').optional()
+    to: z.string().min(1, 'To stage is required').optional(),
+    applicationId: z.string().cuid('Invalid application ID').optional(),
+    dryRun: z.enum(['true', 'false']).optional()
   }),
 
   getStages: z.object({

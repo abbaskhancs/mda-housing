@@ -68,8 +68,13 @@ export const generateIntakeReceipt = async (applicationId: string): Promise<stri
       buffer: receiptPdfBuffer,
       originalname: `intake-receipt-${application.applicationNumber}.html`,
       mimetype: 'text/html',
-      size: receiptPdfBuffer.length
-    };
+      size: receiptPdfBuffer.length,
+      fieldname: 'receipt',
+      encoding: '7bit',
+      stream: null as any,
+      destination: '',
+      filename: `intake-receipt-${application.applicationNumber}.html`
+    } as Express.Multer.File;
 
     const uploadResult = await uploadFile(receiptFile, applicationId, 'IntakeReceipt');
 

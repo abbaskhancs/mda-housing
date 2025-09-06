@@ -79,11 +79,11 @@ Milestone 1.2: `prisma db seed` populates lookups and demo rows. ✅ COMPLETED (
 7. ✅ Accounts endpoints: upsert, verify‑payment (auto stage move, clearance to CLEAR).
 8. ✅ Reviews endpoint: insert review rows and optional auto‑transition.
 9. ✅ Deed endpoints: draft, finalize (hash + owner flip in same transaction).
-10. Lookups endpoints including `transitions?from=<stage>` with dry‑run guards.
+10. ✅ Lookups endpoints including `transitions?from=<stage>` with dry‑run guards.
 
 
-Milestone 2.1: All endpoints respond with mocked auth; Postman collection green.
-Milestone 2.2: Guard unit tests pass; sample flow executes end‑to‑end via API.
+Milestone 2.1: ✅ All endpoints respond with mocked auth; Postman collection green.
+Milestone 2.2: ✅ Guard unit tests pass; sample flow executes end‑to‑end via API.
 
 
 ### Phase 3 – Documents & Storage (1 day)

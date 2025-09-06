@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const client_1 = require("@prisma/client");
@@ -70,11 +103,25 @@ router.get('/statuses', auth_1.authenticateToken, (0, validation_1.validateQuery
     });
 }));
 /**
+ * GET /api/workflow/guards
+ * Get all available workflow guards
+ */
+router.get('/guards', auth_1.authenticateToken, (0, errorHandler_1.asyncHandler)(async (req, res) => {
+    const { getAvailableGuards, getGuardDescription } = await Promise.resolve().then(() => __importStar(require('../guards/workflowGuards')));
+    const guards = getAvailableGuards().map(guardName => ({
+        name: guardName,
+        description: getGuardDescription(guardName)
+    }));
+    res.json({
+        guards
+    });
+}));
+/**
  * GET /api/workflow/transitions
- * Get workflow transitions
+ * Get workflow transitions with optional dry-run guard evaluation
  */
 router.get('/transitions', auth_1.authenticateToken, (0, validation_1.validateQuery)(validation_2.workflowSchemas.getTransitions), (0, errorHandler_1.asyncHandler)(async (req, res) => {
-    const { from, to } = req.query;
+    const { from, to, applicationId, dryRun } = req.query;
     let where = {};
     if (from) {
         const fromStage = await prisma.wfStage.findFirst({
@@ -100,16 +147,74 @@ router.get('/transitions', auth_1.authenticateToken, (0, validation_1.validateQu
         },
         orderBy: { sortOrder: 'asc' }
     });
-    res.json({
-        transitions
-    });
+    // If dry-run is requested and applicationId is provided, evaluate guards
+    if (dryRun === 'true' && applicationId) {
+        const application = await prisma.application.findUnique({
+            where: { id: applicationId },
+            include: {
+                currentStage: true,
+                clearances: {
+                    include: {
+                        section: true,
+                        status: true
+                    }
+                }
+            }
+        });
+        if (!application) {
+            throw (0, errorHandler_1.createError)('Application not found', 404, 'APPLICATION_NOT_FOUND');
+        }
+        // Evaluate guards for each transition
+        const transitionsWithGuards = await Promise.all(transitions.map(async (transition) => {
+            const guardContext = {
+                applicationId: application.id,
+                userId: req.user.id,
+                userRole: req.user.role,
+                fromStageId: application.currentStageId,
+                toStageId: transition.toStageId,
+                additionalData: { dryRun: true }
+            };
+            let guardResult = null;
+            if ((0, workflowGuards_1.validateGuardContext)(guardContext)) {
+                try {
+                    guardResult = await (0, workflowGuards_1.executeGuard)(transition.guardName, guardContext);
+                }
+                catch (error) {
+                    guardResult = {
+                        canTransition: false,
+                        reason: `Guard evaluation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+                    };
+                }
+            }
+            return {
+                ...transition,
+                guardResult
+            };
+        }));
+        res.json({
+            transitions: transitionsWithGuards,
+            application: {
+                id: application.id,
+                currentStage: application.currentStage
+            }
+        });
+    }
+    else {
+        res.json({
+            transitions
+        });
+    }
 }));
 /**
  * GET /api/workflow/transitions/:fromStage
- * Get available transitions from a specific stage
+ * Get available transitions from a specific stage with optional dry-run guard evaluation
  */
-router.get('/transitions/:fromStage', auth_1.authenticateToken, (0, validation_1.validateParams)(zod_1.z.object({ fromStage: zod_1.z.string() })), (0, errorHandler_1.asyncHandler)(async (req, res) => {
+router.get('/transitions/:fromStage', auth_1.authenticateToken, (0, validation_1.validateParams)(zod_1.z.object({ fromStage: zod_1.z.string() })), (0, validation_1.validateQuery)(zod_1.z.object({
+    applicationId: zod_1.z.string().cuid('Invalid application ID').optional(),
+    dryRun: zod_1.z.enum(['true', 'false']).optional()
+})), (0, errorHandler_1.asyncHandler)(async (req, res) => {
     const { fromStage } = req.params;
+    const { applicationId, dryRun } = req.query;
     const stage = await prisma.wfStage.findFirst({
         where: { code: fromStage }
     });
@@ -124,10 +229,65 @@ router.get('/transitions/:fromStage', auth_1.authenticateToken, (0, validation_1
         },
         orderBy: { sortOrder: 'asc' }
     });
-    res.json({
-        fromStage: stage,
-        transitions
-    });
+    // If dry-run is requested and applicationId is provided, evaluate guards
+    if (dryRun === 'true' && applicationId) {
+        const application = await prisma.application.findUnique({
+            where: { id: applicationId },
+            include: {
+                currentStage: true,
+                clearances: {
+                    include: {
+                        section: true,
+                        status: true
+                    }
+                }
+            }
+        });
+        if (!application) {
+            throw (0, errorHandler_1.createError)('Application not found', 404, 'APPLICATION_NOT_FOUND');
+        }
+        // Evaluate guards for each transition
+        const transitionsWithGuards = await Promise.all(transitions.map(async (transition) => {
+            const guardContext = {
+                applicationId: application.id,
+                userId: req.user.id,
+                userRole: req.user.role,
+                fromStageId: application.currentStageId,
+                toStageId: transition.toStageId,
+                additionalData: { dryRun: true }
+            };
+            let guardResult = null;
+            if ((0, workflowGuards_1.validateGuardContext)(guardContext)) {
+                try {
+                    guardResult = await (0, workflowGuards_1.executeGuard)(transition.guardName, guardContext);
+                }
+                catch (error) {
+                    guardResult = {
+                        canTransition: false,
+                        reason: `Guard evaluation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+                    };
+                }
+            }
+            return {
+                ...transition,
+                guardResult
+            };
+        }));
+        res.json({
+            fromStage: stage,
+            transitions: transitionsWithGuards,
+            application: {
+                id: application.id,
+                currentStage: application.currentStage
+            }
+        });
+    }
+    else {
+        res.json({
+            fromStage: stage,
+            transitions
+        });
+    }
 }));
 /**
  * POST /api/workflow/applications/:id/transition

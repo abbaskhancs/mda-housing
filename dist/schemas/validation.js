@@ -94,6 +94,12 @@ exports.applicationSchemas = {
     transition: zod_1.z.object({
         toStageId: zod_1.z.string().cuid('Invalid stage ID'),
         remarks: zod_1.z.string().max(500, 'Remarks too long').optional()
+    }),
+    clearance: zod_1.z.object({
+        sectionId: zod_1.z.string().cuid('Invalid section ID'),
+        statusId: zod_1.z.string().cuid('Invalid status ID'),
+        remarks: zod_1.z.string().max(500, 'Remarks too long').optional(),
+        signedPdfUrl: zod_1.z.string().url('Invalid PDF URL').optional()
     })
 };
 // Attachment schemas
@@ -196,7 +202,9 @@ exports.transferDeedSchemas = {
 exports.workflowSchemas = {
     getTransitions: zod_1.z.object({
         from: zod_1.z.string().min(1, 'From stage is required').optional(),
-        to: zod_1.z.string().min(1, 'To stage is required').optional()
+        to: zod_1.z.string().min(1, 'To stage is required').optional(),
+        applicationId: zod_1.z.string().cuid('Invalid application ID').optional(),
+        dryRun: zod_1.z.enum(['true', 'false']).optional()
     }),
     getStages: zod_1.z.object({
         sortOrder: zod_1.z.enum(['asc', 'desc']).default('asc')

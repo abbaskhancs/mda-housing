@@ -83,11 +83,28 @@ router.get('/statuses', authenticateToken, validateQuery(workflowSchemas.getStat
 }));
 
 /**
+ * GET /api/workflow/guards
+ * Get all available workflow guards
+ */
+router.get('/guards', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+  const { getAvailableGuards, getGuardDescription } = await import('../guards/workflowGuards');
+  
+  const guards = getAvailableGuards().map(guardName => ({
+    name: guardName,
+    description: getGuardDescription(guardName)
+  }));
+
+  res.json({
+    guards
+  });
+}));
+
+/**
  * GET /api/workflow/transitions
- * Get workflow transitions
+ * Get workflow transitions with optional dry-run guard evaluation
  */
 router.get('/transitions', authenticateToken, validateQuery(workflowSchemas.getTransitions), asyncHandler(async (req: Request, res: Response) => {
-  const { from, to } = req.query;
+  const { from, to, applicationId, dryRun } = req.query;
 
   let where: any = {};
 
@@ -118,17 +135,80 @@ router.get('/transitions', authenticateToken, validateQuery(workflowSchemas.getT
     orderBy: { sortOrder: 'asc' }
   });
 
-  res.json({
-    transitions
-  });
+  // If dry-run is requested and applicationId is provided, evaluate guards
+  if (dryRun === 'true' && applicationId) {
+    const application = await prisma.application.findUnique({
+      where: { id: applicationId as string },
+      include: {
+        currentStage: true,
+        clearances: {
+          include: {
+            section: true,
+            status: true
+          }
+        }
+      }
+    });
+
+    if (!application) {
+      throw createError('Application not found', 404, 'APPLICATION_NOT_FOUND');
+    }
+
+    // Evaluate guards for each transition
+    const transitionsWithGuards = await Promise.all(
+      transitions.map(async (transition) => {
+        const guardContext = {
+          applicationId: application.id,
+          userId: req.user!.id,
+          userRole: req.user!.role,
+          fromStageId: application.currentStageId,
+          toStageId: transition.toStageId,
+          additionalData: { dryRun: true }
+        };
+
+        let guardResult = null;
+        if (validateGuardContext(guardContext)) {
+          try {
+            guardResult = await executeGuard(transition.guardName, guardContext);
+          } catch (error) {
+            guardResult = {
+              canTransition: false,
+              reason: `Guard evaluation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+            };
+          }
+        }
+
+        return {
+          ...transition,
+          guardResult
+        };
+      })
+    );
+
+    res.json({
+      transitions: transitionsWithGuards,
+      application: {
+        id: application.id,
+        currentStage: application.currentStage
+      }
+    });
+  } else {
+    res.json({
+      transitions
+    });
+  }
 }));
 
 /**
  * GET /api/workflow/transitions/:fromStage
- * Get available transitions from a specific stage
+ * Get available transitions from a specific stage with optional dry-run guard evaluation
  */
-router.get('/transitions/:fromStage', authenticateToken, validateParams(z.object({ fromStage: z.string() })), asyncHandler(async (req: Request, res: Response) => {
+router.get('/transitions/:fromStage', authenticateToken, validateParams(z.object({ fromStage: z.string() })), validateQuery(z.object({ 
+  applicationId: z.string().cuid('Invalid application ID').optional(),
+  dryRun: z.enum(['true', 'false']).optional()
+})), asyncHandler(async (req: Request, res: Response) => {
   const { fromStage } = req.params;
+  const { applicationId, dryRun } = req.query;
 
   const stage = await prisma.wfStage.findFirst({
     where: { code: fromStage }
@@ -147,10 +227,70 @@ router.get('/transitions/:fromStage', authenticateToken, validateParams(z.object
     orderBy: { sortOrder: 'asc' }
   });
 
-  res.json({
-    fromStage: stage,
-    transitions
-  });
+  // If dry-run is requested and applicationId is provided, evaluate guards
+  if (dryRun === 'true' && applicationId) {
+    const application = await prisma.application.findUnique({
+      where: { id: applicationId as string },
+      include: {
+        currentStage: true,
+        clearances: {
+          include: {
+            section: true,
+            status: true
+          }
+        }
+      }
+    });
+
+    if (!application) {
+      throw createError('Application not found', 404, 'APPLICATION_NOT_FOUND');
+    }
+
+    // Evaluate guards for each transition
+    const transitionsWithGuards = await Promise.all(
+      transitions.map(async (transition) => {
+        const guardContext = {
+          applicationId: application.id,
+          userId: req.user!.id,
+          userRole: req.user!.role,
+          fromStageId: application.currentStageId,
+          toStageId: transition.toStageId,
+          additionalData: { dryRun: true }
+        };
+
+        let guardResult = null;
+        if (validateGuardContext(guardContext)) {
+          try {
+            guardResult = await executeGuard(transition.guardName, guardContext);
+          } catch (error) {
+            guardResult = {
+              canTransition: false,
+              reason: `Guard evaluation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+            };
+          }
+        }
+
+        return {
+          ...transition,
+          guardResult
+        };
+      })
+    );
+
+    res.json({
+      fromStage: stage,
+      transitions: transitionsWithGuards,
+      application: {
+        id: application.id,
+        currentStage: application.currentStage
+      }
+    });
+  } else {
+    res.json({
+      fromStage: stage,
+      transitions
+    });
+  }
 }));
 
 /**

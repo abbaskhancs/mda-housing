@@ -186,6 +186,22 @@ export declare const applicationSchemas: {
         toStageId: string;
         remarks?: string | undefined;
     }>;
+    clearance: z.ZodObject<{
+        sectionId: z.ZodString;
+        statusId: z.ZodString;
+        remarks: z.ZodOptional<z.ZodString>;
+        signedPdfUrl: z.ZodOptional<z.ZodString>;
+    }, "strip", z.ZodTypeAny, {
+        sectionId: string;
+        statusId: string;
+        remarks?: string | undefined;
+        signedPdfUrl?: string | undefined;
+    }, {
+        sectionId: string;
+        statusId: string;
+        remarks?: string | undefined;
+        signedPdfUrl?: string | undefined;
+    }>;
 };
 export declare const attachmentSchemas: {
     upload: z.ZodObject<{
@@ -368,12 +384,18 @@ export declare const workflowSchemas: {
     getTransitions: z.ZodObject<{
         from: z.ZodOptional<z.ZodString>;
         to: z.ZodOptional<z.ZodString>;
+        applicationId: z.ZodOptional<z.ZodString>;
+        dryRun: z.ZodOptional<z.ZodEnum<["true", "false"]>>;
     }, "strip", z.ZodTypeAny, {
         from?: string | undefined;
         to?: string | undefined;
+        applicationId?: string | undefined;
+        dryRun?: "true" | "false" | undefined;
     }, {
         from?: string | undefined;
         to?: string | undefined;
+        applicationId?: string | undefined;
+        dryRun?: "true" | "false" | undefined;
     }>;
     getStages: z.ZodObject<{
         sortOrder: z.ZodDefault<z.ZodEnum<["asc", "desc"]>>;
