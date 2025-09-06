@@ -73,8 +73,8 @@ Milestone 1.2: `prisma db seed` populates lookups and demo rows. ✅ COMPLETED (
 1. ✅ Auth & RBAC: JWT middleware, role checks; demo users.
 2. ✅ Validation: Zod schemas per endpoint; centralized error handler.
 3. ✅ Guards: implement `GUARDS` map as per spec; unit tests for each.
-4. Generic transition handler `/api/applications/:id/transition` with transaction + `AuditLog`.
-5. Applications intake `POST /api/applications` with attachments (multer), S3/MinIO upload, receipt creation (async job OK, but record URL if ready).
+4. ✅ Generic transition handler `/api/applications/:id/transition` with transaction + `AuditLog`.
+5. ✅ Applications intake `POST /api/applications` with attachments (multer), S3/MinIO upload, receipt creation (async job OK, but record URL if ready).
 6. Clearances `POST /api/applications/:id/clearances` with auto‑progress logic for BCA/Housing.
 7. Accounts endpoints: upsert, verify‑payment (auto stage move, clearance to CLEAR).
 8. Reviews endpoint: insert review rows and optional auto‑transition.
