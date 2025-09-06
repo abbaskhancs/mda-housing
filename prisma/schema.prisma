@@ -1,0 +1,294 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// Workflow Configuration Tables (Data-driven lookups, no enums)
+
+model WfStatus {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  sortOrder Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  clearances Clearance[]
+
+  @@map("wf_status")
+}
+
+model WfSection {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  sortOrder Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  clearances           Clearance[]
+  sectionGroupMembers  WfSectionGroupMember[]
+  reviews              Review[]
+
+  @@map("wf_section")
+}
+
+model WfSectionGroup {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  sortOrder Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  members WfSectionGroupMember[]
+
+  @@map("wf_section_group")
+}
+
+model WfSectionGroupMember {
+  id              String   @id @default(cuid())
+  sectionGroupId  String
+  sectionId       String
+  sortOrder       Int
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  sectionGroup WfSectionGroup @relation(fields: [sectionGroupId], references: [id], onDelete: Cascade)
+  section     WfSection      @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  @@unique([sectionGroupId, sectionId])
+  @@map("wf_section_group_member")
+}
+
+model WfStage {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  sortOrder Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  applicationsFrom Application[] @relation("ApplicationFromStage")
+  applicationsTo   Application[] @relation("ApplicationToStage")
+  transitionsFrom  WfTransition[] @relation("TransitionFromStage")
+  transitionsTo    WfTransition[] @relation("TransitionToStage")
+
+  @@map("wf_stage")
+}
+
+model WfTransition {
+  id        String   @id @default(cuid())
+  fromStageId String
+  toStageId   String
+  guardName   String
+  sortOrder   Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  fromStage WfStage @relation("TransitionFromStage", fields: [fromStageId], references: [id], onDelete: Cascade)
+  toStage   WfStage @relation("TransitionToStage", fields: [toStageId], references: [id], onDelete: Cascade)
+
+  @@unique([fromStageId, toStageId])
+  @@map("wf_transition")
+}
+
+// Core Business Entities
+
+model Person {
+  id          String   @id @default(cuid())
+  cnic        String   @unique
+  name        String
+  fatherName  String?
+  address     String?
+  phone       String?
+  email       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  applicationsAsSeller    Application[] @relation("ApplicationSeller")
+  applicationsAsBuyer     Application[] @relation("ApplicationBuyer")
+  applicationsAsAttorney   Application[] @relation("ApplicationAttorney")
+  transferDeedsAsWitness1 TransferDeed[] @relation("TransferDeedWitness1")
+  transferDeedsAsWitness2 TransferDeed[] @relation("TransferDeedWitness2")
+
+  @@map("person")
+}
+
+model Plot {
+  id           String   @id @default(cuid())
+  plotNumber   String   @unique
+  blockNumber  String?
+  sectorNumber String?
+  area         Decimal?
+  location     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  applications Application[]
+
+  @@map("plot")
+}
+
+model Application {
+  id              String   @id @default(cuid())
+  applicationNumber String   @unique @default(cuid())
+  sellerId         String
+  buyerId          String
+  attorneyId       String?
+  plotId           String
+  currentStageId   String
+  previousStageId  String?
+  status           String   @default("ACTIVE")
+  submittedAt      DateTime @default(now())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relations
+  seller           Person           @relation("ApplicationSeller", fields: [sellerId], references: [id])
+  buyer            Person           @relation("ApplicationBuyer", fields: [buyerId], references: [id])
+  attorney         Person?          @relation("ApplicationAttorney", fields: [attorneyId], references: [id])
+  plot             Plot             @relation(fields: [plotId], references: [id])
+  currentStage     WfStage          @relation("ApplicationToStage", fields: [currentStageId], references: [id])
+  previousStage    WfStage?         @relation("ApplicationFromStage", fields: [previousStageId], references: [id])
+  attachments      Attachment[]
+  clearances       Clearance[]
+  accountsBreakdown AccountsBreakdown?
+  reviews          Review[]
+  transferDeed     TransferDeed?
+  auditLogs        AuditLog[]
+
+  @@map("application")
+}
+
+model Attachment {
+  id             String   @id @default(cuid())
+  applicationId  String
+  docType        String
+  fileName       String
+  originalName   String
+  fileSize       Int
+  mimeType       String
+  storageUrl     String
+  hashSha256     String?
+  isOriginalSeen Boolean  @default(false)
+  uploadedAt     DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@map("attachment")
+}
+
+model Clearance {
+  id             String   @id @default(cuid())
+  applicationId  String
+  sectionId      String
+  statusId       String
+  remarks        String?
+  signedPdfUrl   String?
+  clearedAt      DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  section    WfSection   @relation(fields: [sectionId], references: [id])
+  status     WfStatus    @relation(fields: [statusId], references: [id])
+
+  @@unique([applicationId, sectionId])
+  @@map("clearance")
+}
+
+model AccountsBreakdown {
+  id             String   @id @default(cuid())
+  applicationId  String   @unique
+  totalAmount    Decimal
+  paidAmount     Decimal  @default(0)
+  remainingAmount Decimal
+  challanUrl     String?
+  paymentVerified Boolean @default(false)
+  verifiedAt     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@map("accounts_breakdown")
+}
+
+model Review {
+  id            String   @id @default(cuid())
+  applicationId String
+  sectionId     String
+  reviewerId    String
+  remarks       String?
+  status        String   @default("PENDING")
+  reviewedAt    DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  section    WfSection   @relation(fields: [sectionId], references: [id])
+
+  @@unique([applicationId, sectionId])
+  @@map("review")
+}
+
+model TransferDeed {
+  id             String   @id @default(cuid())
+  applicationId  String   @unique
+  witness1Id     String
+  witness2Id     String
+  deedContent    String?
+  deedPdfUrl     String?
+  hashSha256     String?
+  isFinalized    Boolean  @default(false)
+  finalizedAt    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  witness1    Person      @relation("TransferDeedWitness1", fields: [witness1Id], references: [id])
+  witness2    Person      @relation("TransferDeedWitness2", fields: [witness2Id], references: [id])
+
+  @@map("transfer_deed")
+}
+
+model AuditLog {
+  id            String   @id @default(cuid())
+  applicationId String
+  userId        String
+  action        String
+  fromStageId   String?
+  toStageId     String?
+  details       String?
+  ipAddress     String?
+  userAgent     String?
+  createdAt     DateTime @default(now())
+
+  // Relations
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@map("audit_log")
+}

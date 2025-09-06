@@ -52,5 +52,8 @@
   },
   "keywords": ["housing", "workflow", "transfer", "mda"],
   "author": "MDA Housing Team",
-  "license": "MIT"
+  "license": "MIT",
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
+  }
 }

@@ -54,19 +54,19 @@ Local Postgres and MinIO installed natively (no Docker) for the demo; can be swa
 Milestone 0.1: Local Postgres/MinIO running; API boots and returns 200 on health. (Completed)
 
 
-### Phase 1 – Data Model & Seed (1 day)
-1. Implement Prisma schema exactly as specified (data‑driven lookups; no enums).
-2. Create migrations.
-3. Write seeding for:
+### Phase 1 – Data Model & Seed (1 day) ✅ COMPLETED
+1. ✅ Implement Prisma schema exactly as specified (data‑driven lookups; no enums).
+2. ✅ Create migrations.
+3. ✅ Write seeding for:
    - `WfStatus`: CLEAR, OBJECTION, PENDING, PENDING_PAYMENT.
    - `WfSection`: BCA, HOUSING, ACCOUNTS, WATER.
    - `WfSectionGroup`: BCA_HOUSING, ACCOUNTS; with members.
    - `WfStage`: codes list and sort order.
    - `WfTransition`: edges with `guardName` per spec.
-4. Seed demo `Person`, `Plot`.
+4. ✅ Seed demo `Person`, `Plot`.
 
-Milestone 1.1: `prisma migrate dev` succeeds.
-Milestone 1.2: `prisma db seed` populates lookups and demo rows.
+Milestone 1.1: `prisma migrate dev` succeeds. ✅ COMPLETED (SQLite database created)
+Milestone 1.2: `prisma db seed` populates lookups and demo rows. ✅ COMPLETED (All lookup tables and demo data seeded)
 
 
 ### Phase 2 – Backend Core (2 days)
