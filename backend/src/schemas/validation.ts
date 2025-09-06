@@ -107,6 +107,13 @@ export const applicationSchemas = {
   transition: z.object({
     toStageId: z.string().cuid('Invalid stage ID'),
     remarks: z.string().max(500, 'Remarks too long').optional()
+  }),
+
+  clearance: z.object({
+    sectionId: z.string().cuid('Invalid section ID'),
+    statusId: z.string().cuid('Invalid status ID'),
+    remarks: z.string().max(500, 'Remarks too long').optional(),
+    signedPdfUrl: z.string().url('Invalid PDF URL').optional()
   })
 };
 

@@ -2,13 +2,17 @@ import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth';
 import { validate, validateParams } from '../middleware/validation';
-import { applicationSchemas, commonSchemas } from '../schemas/validation';
+import { applicationSchemas, commonSchemas, clearanceSchemas, accountsSchemas, reviewSchemas, transferDeedSchemas } from '../schemas/validation';
 import { asyncHandler, createError } from '../middleware/errorHandler';
 import { logger } from '../config/logger';
 import { executeGuard, validateGuardContext } from '../guards/workflowGuards';
 import { uploadMultiple } from '../middleware/upload';
 import { uploadFile } from '../config/storage';
 import { generateIntakeReceipt, createReceiptRecord } from '../services/receiptService';
+import { createClearance, getClearancesByApplication, getClearanceById } from '../services/clearanceService';
+import { upsertAccountsBreakdown, verifyPayment, getAccountsBreakdown } from '../services/accountsService';
+import { createReview, updateReview, getReviewsByApplication, getReviewById, getReviewsBySection } from '../services/reviewService';
+import { createDeedDraft, finalizeDeed, getTransferDeed, updateDeedDraft } from '../services/deedService';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -547,6 +551,689 @@ router.post('/:id/attachments', authenticateToken, validateParams(commonSchemas.
     message: 'Attachments uploaded successfully',
     application: result.application,
     attachments: result.attachments
+  });
+}));
+
+/**
+ * POST /api/applications/:id/clearances
+ * Create clearance for application with auto-progress logic
+ */
+router.post('/:id/clearances', authenticateToken, validateParams(commonSchemas.idParam), validate(clearanceSchemas.create), asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { sectionId, statusId, remarks, signedPdfUrl } = req.body;
+
+  // Check if application exists
+  const application = await prisma.application.findUnique({
+    where: { id },
+    include: {
+      currentStage: true
+    }
+  });
+
+  if (!application) {
+    throw createError('Application not found', 404, 'APPLICATION_NOT_FOUND');
+  }
+
+  // Create clearance with auto-progress logic
+  const result = await createClearance(
+    id,
+    sectionId,
+    statusId,
+    remarks || null,
+    req.user!.id,
+    signedPdfUrl
+  );
+
+  // Update audit log with IP and user agent
+  await prisma.auditLog.updateMany({
+    where: {
+      applicationId: id,
+      userId: req.user!.id,
+      action: 'CLEARANCE_CREATED'
+    },
+    data: {
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent')
+    }
+  });
+
+  // If there was an auto-transition, update its audit log too
+  if (result.autoTransition) {
+    await prisma.auditLog.updateMany({
+      where: {
+        applicationId: id,
+        userId: req.user!.id,
+        action: 'AUTO_STAGE_TRANSITION'
+      },
+      data: {
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      }
+    });
+  }
+
+  logger.info(`Clearance created for application ${id} by user ${req.user!.username}. Auto-transition: ${result.autoTransition ? 'Yes' : 'No'}`);
+
+  res.status(201).json({
+    message: 'Clearance created successfully',
+    clearance: result.clearance,
+    autoTransition: result.autoTransition
+  });
+}));
+
+/**
+ * GET /api/applications/:id/clearances
+ * Get all clearances for an application
+ */
+router.get('/:id/clearances', authenticateToken, validateParams(commonSchemas.idParam), asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  // Check if application exists
+  const application = await prisma.application.findUnique({
+    where: { id }
+  });
+
+  if (!application) {
+    throw createError('Application not found', 404, 'APPLICATION_NOT_FOUND');
+  }
+
+  const clearances = await getClearancesByApplication(id);
+
+  res.json({
+    clearances
+  });
+}));
+
+/**
+ * GET /api/applications/:id/clearances/:clearanceId
+ * Get specific clearance by ID
+ */
+router.get('/:id/clearances/:clearanceId', authenticateToken, validateParams(commonSchemas.idParam), validateParams(commonSchemas.idParam), asyncHandler(async (req: Request, res: Response) => {
+  const { id, clearanceId } = req.params;
+
+  // Check if application exists
+  const application = await prisma.application.findUnique({
+    where: { id }
+  });
+
+  if (!application) {
+    throw createError('Application not found', 404, 'APPLICATION_NOT_FOUND');
+  }
+
+  const clearance = await getClearanceById(clearanceId);
+
+  if (!clearance) {
+    throw createError('Clearance not found', 404, 'CLEARANCE_NOT_FOUND');
+  }
+
+  // Verify clearance belongs to this application
+  if (clearance.applicationId !== id) {
+    throw createError('Clearance does not belong to this application', 400, 'INVALID_CLEARANCE');
+  }
+
+  res.json({
+    clearance
+  });
+}));
+
+/**
+ * POST /api/applications/:id/accounts
+ * Upsert accounts breakdown for application
+ */
+router.post('/:id/accounts', authenticateToken, validateParams(commonSchemas.idParam), validate(accountsSchemas.create), asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { totalAmount, challanUrl } = req.body;
+
+  // Check if application exists
+  const application = await prisma.application.findUnique({
+    where: { id }
+  });
+
+  if (!application) {
+    throw createError('Application not found', 404, 'APPLICATION_NOT_FOUND');
+  }
+
+  // Upsert accounts breakdown
+  const result = await upsertAccountsBreakdown(
+    id,
+    totalAmount,
+    challanUrl || null,
+    req.user!.id
+  );
+
+  // Update audit log with IP and user agent
+  await prisma.auditLog.updateMany({
+    where: {
+      applicationId: id,
+      userId: req.user!.id,
+      action: 'ACCOUNTS_UPSERTED'
+    },
+    data: {
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent')
+    }
+  });
+
+  // If there was an auto-transition, update its audit log too
+  if (result.autoTransition) {
+    await prisma.auditLog.updateMany({
+      where: {
+        applicationId: id,
+        userId: req.user!.id,
+        action: 'AUTO_STAGE_TRANSITION'
+      },
+      data: {
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      }
+    });
+  }
+
+  logger.info(`Accounts breakdown upserted for application ${id} by user ${req.user!.username}. Auto-transition: ${result.autoTransition ? 'Yes' : 'No'}`);
+
+  res.status(201).json({
+    message: 'Accounts breakdown upserted successfully',
+    accountsBreakdown: result.accountsBreakdown,
+    autoTransition: result.autoTransition
+  });
+}));
+
+/**
+ * POST /api/applications/:id/accounts/verify-payment
+ * Verify payment and update accounts breakdown
+ */
+router.post('/:id/accounts/verify-payment', authenticateToken, validateParams(commonSchemas.idParam), validate(accountsSchemas.verifyPayment), asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { paidAmount, challanUrl } = req.body;
+
+  // Check if application exists
+  const application = await prisma.application.findUnique({
+    where: { id }
+  });
+
+  if (!application) {
+    throw createError('Application not found', 404, 'APPLICATION_NOT_FOUND');
+  }
+
+  // Verify payment
+  const result = await verifyPayment(
+    id,
+    paidAmount,
+    challanUrl || null,
+    req.user!.id
+  );
+
+  // Update audit log with IP and user agent
+  await prisma.auditLog.updateMany({
+    where: {
+      applicationId: id,
+      userId: req.user!.id,
+      action: 'PAYMENT_VERIFIED'
+    },
+    data: {
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent')
+    }
+  });
+
+  // If there was an auto-transition, update its audit log too
+  if (result.autoTransition) {
+    await prisma.auditLog.updateMany({
+      where: {
+        applicationId: id,
+        userId: req.user!.id,
+        action: 'AUTO_STAGE_TRANSITION'
+      },
+      data: {
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      }
+    });
+  }
+
+  // If ACCOUNTS clearance was created, update its audit log too
+  if (result.clearanceCreated) {
+    await prisma.auditLog.updateMany({
+      where: {
+        applicationId: id,
+        userId: req.user!.id,
+        action: 'CLEARANCE_CREATED'
+      },
+      data: {
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      }
+    });
+  }
+
+  logger.info(`Payment verified for application ${id} by user ${req.user!.username}. Auto-transition: ${result.autoTransition ? 'Yes' : 'No'}, Clearance created: ${result.clearanceCreated ? 'Yes' : 'No'}`);
+
+  res.status(200).json({
+    message: 'Payment verified successfully',
+    accountsBreakdown: result.accountsBreakdown,
+    autoTransition: result.autoTransition,
+    clearanceCreated: result.clearanceCreated
+  });
+}));
+
+/**
+ * GET /api/applications/:id/accounts
+ * Get accounts breakdown for application
+ */
+router.get('/:id/accounts', authenticateToken, validateParams(commonSchemas.idParam), asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  // Check if application exists
+  const application = await prisma.application.findUnique({
+    where: { id }
+  });
+
+  if (!application) {
+    throw createError('Application not found', 404, 'APPLICATION_NOT_FOUND');
+  }
+
+  const accountsBreakdown = await getAccountsBreakdown(id);
+
+  res.json({
+    accountsBreakdown
+  });
+}));
+
+/**
+ * POST /api/applications/:id/reviews
+ * Create review for application with optional auto-transition
+ */
+router.post('/:id/reviews', authenticateToken, validateParams(commonSchemas.idParam), validate(reviewSchemas.create), asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { sectionId, remarks, status, autoTransition = false } = req.body;
+
+  // Check if application exists
+  const application = await prisma.application.findUnique({
+    where: { id }
+  });
+
+  if (!application) {
+    throw createError('Application not found', 404, 'APPLICATION_NOT_FOUND');
+  }
+
+  // Create review
+  const result = await createReview(
+    id,
+    sectionId,
+    req.user!.id,
+    remarks || null,
+    status,
+    autoTransition
+  );
+
+  // Update audit log with IP and user agent
+  await prisma.auditLog.updateMany({
+    where: {
+      applicationId: id,
+      userId: req.user!.id,
+      action: 'REVIEW_CREATED'
+    },
+    data: {
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent')
+    }
+  });
+
+  // If there was an auto-transition, update its audit log too
+  if (result.autoTransition) {
+    await prisma.auditLog.updateMany({
+      where: {
+        applicationId: id,
+        userId: req.user!.id,
+        action: 'AUTO_STAGE_TRANSITION'
+      },
+      data: {
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      }
+    });
+  }
+
+  logger.info(`Review created for application ${id} by user ${req.user!.username}. Auto-transition: ${result.autoTransition ? 'Yes' : 'No'}`);
+
+  res.status(201).json({
+    message: 'Review created successfully',
+    review: result.review,
+    autoTransition: result.autoTransition
+  });
+}));
+
+/**
+ * PUT /api/applications/:id/reviews/:reviewId
+ * Update review with optional auto-transition
+ */
+router.put('/:id/reviews/:reviewId', authenticateToken, validateParams(commonSchemas.idParam), validate(reviewSchemas.update), asyncHandler(async (req: Request, res: Response) => {
+  const { id, reviewId } = req.params;
+  const { remarks, status, autoTransition = false } = req.body;
+
+  // Check if application exists
+  const application = await prisma.application.findUnique({
+    where: { id }
+  });
+
+  if (!application) {
+    throw createError('Application not found', 404, 'APPLICATION_NOT_FOUND');
+  }
+
+  // Update review
+  const result = await updateReview(
+    reviewId,
+    req.user!.id,
+    remarks || null,
+    status,
+    autoTransition
+  );
+
+  // Update audit log with IP and user agent
+  await prisma.auditLog.updateMany({
+    where: {
+      applicationId: id,
+      userId: req.user!.id,
+      action: 'REVIEW_UPDATED'
+    },
+    data: {
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent')
+    }
+  });
+
+  // If there was an auto-transition, update its audit log too
+  if (result.autoTransition) {
+    await prisma.auditLog.updateMany({
+      where: {
+        applicationId: id,
+        userId: req.user!.id,
+        action: 'AUTO_STAGE_TRANSITION'
+      },
+      data: {
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      }
+    });
+  }
+
+  logger.info(`Review updated for application ${id} by user ${req.user!.username}. Auto-transition: ${result.autoTransition ? 'Yes' : 'No'}`);
+
+  res.status(200).json({
+    message: 'Review updated successfully',
+    review: result.review,
+    autoTransition: result.autoTransition
+  });
+}));
+
+/**
+ * GET /api/applications/:id/reviews
+ * Get all reviews for an application
+ */
+router.get('/:id/reviews', authenticateToken, validateParams(commonSchemas.idParam), asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  // Check if application exists
+  const application = await prisma.application.findUnique({
+    where: { id }
+  });
+
+  if (!application) {
+    throw createError('Application not found', 404, 'APPLICATION_NOT_FOUND');
+  }
+
+  const reviews = await getReviewsByApplication(id);
+
+  res.json({
+    reviews
+  });
+}));
+
+/**
+ * GET /api/applications/:id/reviews/:reviewId
+ * Get specific review by ID
+ */
+router.get('/:id/reviews/:reviewId', authenticateToken, validateParams(commonSchemas.idParam), asyncHandler(async (req: Request, res: Response) => {
+  const { id, reviewId } = req.params;
+
+  // Check if application exists
+  const application = await prisma.application.findUnique({
+    where: { id }
+  });
+
+  if (!application) {
+    throw createError('Application not found', 404, 'APPLICATION_NOT_FOUND');
+  }
+
+  const review = await getReviewById(reviewId);
+
+  if (!review) {
+    throw createError('Review not found', 404, 'REVIEW_NOT_FOUND');
+  }
+
+  // Verify review belongs to this application
+  if (review.applicationId !== id) {
+    throw createError('Review does not belong to this application', 400, 'INVALID_REVIEW');
+  }
+
+  res.json({
+    review
+  });
+}));
+
+/**
+ * GET /api/applications/:id/reviews/section/:sectionCode
+ * Get reviews by section for an application
+ */
+router.get('/:id/reviews/section/:sectionCode', authenticateToken, validateParams(commonSchemas.idParam), asyncHandler(async (req: Request, res: Response) => {
+  const { id, sectionCode } = req.params;
+
+  // Check if application exists
+  const application = await prisma.application.findUnique({
+    where: { id }
+  });
+
+  if (!application) {
+    throw createError('Application not found', 404, 'APPLICATION_NOT_FOUND');
+  }
+
+  const reviews = await getReviewsBySection(id, sectionCode);
+
+  res.json({
+    reviews
+  });
+}));
+
+/**
+ * POST /api/applications/:id/transfer-deed/draft
+ * Create transfer deed draft
+ */
+router.post('/:id/transfer-deed/draft', authenticateToken, validateParams(commonSchemas.idParam), validate(transferDeedSchemas.create), asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { witness1Id, witness2Id, deedContent } = req.body;
+
+  // Check if application exists
+  const application = await prisma.application.findUnique({
+    where: { id }
+  });
+
+  if (!application) {
+    throw createError('Application not found', 404, 'APPLICATION_NOT_FOUND');
+  }
+
+  // Create deed draft
+  const result = await createDeedDraft(
+    id,
+    witness1Id,
+    witness2Id,
+    deedContent || null,
+    req.user!.id
+  );
+
+  // Update audit log with IP and user agent
+  await prisma.auditLog.updateMany({
+    where: {
+      applicationId: id,
+      userId: req.user!.id,
+      action: 'DEED_DRAFT_CREATED'
+    },
+    data: {
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent')
+    }
+  });
+
+  logger.info(`Transfer deed draft created for application ${id} by user ${req.user!.username}`);
+
+  res.status(201).json({
+    message: 'Transfer deed draft created successfully',
+    transferDeed: result.transferDeed
+  });
+}));
+
+/**
+ * PUT /api/applications/:id/transfer-deed/draft
+ * Update transfer deed draft
+ */
+router.put('/:id/transfer-deed/draft', authenticateToken, validateParams(commonSchemas.idParam), validate(transferDeedSchemas.update), asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { witness1Id, witness2Id, deedContent } = req.body;
+
+  // Check if application exists
+  const application = await prisma.application.findUnique({
+    where: { id }
+  });
+
+  if (!application) {
+    throw createError('Application not found', 404, 'APPLICATION_NOT_FOUND');
+  }
+
+  // Update deed draft
+  const result = await updateDeedDraft(
+    id,
+    witness1Id || null,
+    witness2Id || null,
+    deedContent || null,
+    req.user!.id
+  );
+
+  // Update audit log with IP and user agent
+  await prisma.auditLog.updateMany({
+    where: {
+      applicationId: id,
+      userId: req.user!.id,
+      action: 'DEED_DRAFT_UPDATED'
+    },
+    data: {
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent')
+    }
+  });
+
+  logger.info(`Transfer deed draft updated for application ${id} by user ${req.user!.username}`);
+
+  res.status(200).json({
+    message: 'Transfer deed draft updated successfully',
+    transferDeed: result.transferDeed
+  });
+}));
+
+/**
+ * POST /api/applications/:id/transfer-deed/finalize
+ * Finalize transfer deed with hash and ownership transfer
+ */
+router.post('/:id/transfer-deed/finalize', authenticateToken, validateParams(commonSchemas.idParam), validate(transferDeedSchemas.finalize), asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { witness1Signature, witness2Signature } = req.body;
+
+  // Check if application exists
+  const application = await prisma.application.findUnique({
+    where: { id }
+  });
+
+  if (!application) {
+    throw createError('Application not found', 404, 'APPLICATION_NOT_FOUND');
+  }
+
+  // Finalize deed
+  const result = await finalizeDeed(
+    id,
+    witness1Signature,
+    witness2Signature,
+    req.user!.id
+  );
+
+  // Update audit log with IP and user agent
+  await prisma.auditLog.updateMany({
+    where: {
+      applicationId: id,
+      userId: req.user!.id,
+      action: 'DEED_FINALIZED'
+    },
+    data: {
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent')
+    }
+  });
+
+  // Update ownership transfer audit log
+  await prisma.auditLog.updateMany({
+    where: {
+      applicationId: id,
+      userId: req.user!.id,
+      action: 'OWNERSHIP_TRANSFERRED'
+    },
+    data: {
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent')
+    }
+  });
+
+  // If there was an auto-transition, update its audit log too
+  if (result.autoTransition) {
+    await prisma.auditLog.updateMany({
+      where: {
+        applicationId: id,
+        userId: req.user!.id,
+        action: 'AUTO_STAGE_TRANSITION'
+      },
+      data: {
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      }
+    });
+  }
+
+  logger.info(`Transfer deed finalized for application ${id} by user ${req.user!.username}. Auto-transition: ${result.autoTransition ? 'Yes' : 'No'}, Ownership transferred: ${result.ownershipTransferred ? 'Yes' : 'No'}`);
+
+  res.status(200).json({
+    message: 'Transfer deed finalized successfully',
+    transferDeed: result.transferDeed,
+    autoTransition: result.autoTransition,
+    ownershipTransferred: result.ownershipTransferred
+  });
+}));
+
+/**
+ * GET /api/applications/:id/transfer-deed
+ * Get transfer deed for application
+ */
+router.get('/:id/transfer-deed', authenticateToken, validateParams(commonSchemas.idParam), asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  // Check if application exists
+  const application = await prisma.application.findUnique({
+    where: { id }
+  });
+
+  if (!application) {
+    throw createError('Application not found', 404, 'APPLICATION_NOT_FOUND');
+  }
+
+  const transferDeed = await getTransferDeed(id);
+
+  res.json({
+    transferDeed
   });
 }));
 
