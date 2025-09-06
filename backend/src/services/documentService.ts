@@ -175,7 +175,7 @@ export class DocumentService {
       let downloadUrl = document.signedUrl;
       if (!document.expiresAt || new Date() > document.expiresAt) {
         const expiresInHours = 24;
-        downloadUrl = storageService.generateDownloadUrl(documentId, expiresInHours * 3600);
+        downloadUrl = fileStorageService.generateDownloadUrl(documentId, expiresInHours * 3600);
         const expiresAt = new Date(Date.now() + (expiresInHours * 60 * 60 * 1000));
 
         await prisma.document.update({

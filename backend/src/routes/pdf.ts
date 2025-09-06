@@ -82,7 +82,7 @@ router.get('/health', async (req, res) => {
     res.json({ status: 'healthy', service: 'PDF Generation' });
   } catch (error) {
     logger.error('PDF service health check failed:', error);
-    res.status(500).json({ status: 'unhealthy', error: error.message });
+    res.status(500).json({ status: 'unhealthy', error: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
 

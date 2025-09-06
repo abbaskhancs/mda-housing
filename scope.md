@@ -97,7 +97,7 @@ Milestone 2.2: ✅ Guard unit tests pass; sample flow executes end‑to‑end vi
    - ✅ Database integration for document metadata
    - ✅ RESTful API endpoints for document management
 
-Milestone 3.1: Each template renders with sample data and saves to MinIO.
+Milestone 3.1: Each template renders with sample data and saves to MinIO. ✅ COMPLETED
 
 
 ### Phase 4 – Frontend (2–3 days)

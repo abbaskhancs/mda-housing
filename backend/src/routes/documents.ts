@@ -151,7 +151,7 @@ router.get('/health', async (req, res) => {
     });
   } catch (error) {
     logger.error('Document service health check failed:', error);
-    res.status(500).json({ status: 'unhealthy', error: error.message });
+    res.status(500).json({ status: 'unhealthy', error: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
 

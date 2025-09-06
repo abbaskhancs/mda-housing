@@ -7,11 +7,14 @@ const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const helmet_1 = __importDefault(require("helmet"));
 const dotenv_1 = __importDefault(require("dotenv"));
+const path_1 = __importDefault(require("path"));
 const logger_1 = require("./config/logger");
 const errorHandler_1 = require("./middleware/errorHandler");
 const auth_1 = __importDefault(require("./routes/auth"));
 const applications_1 = __importDefault(require("./routes/applications"));
 const workflow_1 = __importDefault(require("./routes/workflow"));
+const pdf_1 = __importDefault(require("./routes/pdf"));
+const documents_1 = __importDefault(require("./routes/documents"));
 // Load environment variables
 dotenv_1.default.config();
 const app = (0, express_1.default)();
@@ -35,10 +38,14 @@ app.get('/health', (req, res) => {
         version: process.env.npm_package_version || '1.0.0'
     });
 });
+// Static file serving for storage
+app.use('/storage', express_1.default.static(path_1.default.join(process.cwd(), 'storage')));
 // API routes
 app.use('/api/auth', auth_1.default);
 app.use('/api/applications', applications_1.default);
 app.use('/api/workflow', workflow_1.default);
+app.use('/api/pdf', pdf_1.default);
+app.use('/api/documents', documents_1.default);
 // API routes placeholder
 app.get('/api', (req, res) => {
     res.json({
