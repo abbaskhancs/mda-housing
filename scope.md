@@ -33,7 +33,7 @@
 ## Assumptions
 - Single‑tenant system for demo; multi‑tenant not required.
 - Minimal user directory with hardcoded demo users/roles for MVP.
-- Local MinIO for object storage; replaceable with S3 later.
+Local Postgres and MinIO installed natively (no Docker) for the demo; can be swapped with containers later.
 
 
 ## Risks & Mitigations
@@ -48,10 +48,10 @@
 ### Phase 0 – Project Scaffolding (0.5–1 day)
 1. Initialize repo structure: backend, frontend, scripts, docs. (Completed)
 2. Add basic tooling: ESLint/Prettier, tsconfig, nodemon, dotenv, Winston logger. (Completed)
-3. Create `.env.example` for API, DB, MinIO, JWT, PDF.
-4. Set up Postgres + MinIO via Docker Compose for dev.
+3. Create `.env.example` for API, DB, MinIO, JWT, PDF. (Completed)
+4. Set up Postgres + MinIO locally (native installs) for dev; document start/stop commands in README (no Docker in Phase 0). (Completed)
 
-Milestone 0.1: `docker compose up` brings DB/MinIO; API boots and returns 200 on health.
+Milestone 0.1: Local Postgres/MinIO running; API boots and returns 200 on health.
 
 
 ### Phase 1 – Data Model & Seed (1 day)
@@ -80,6 +80,19 @@ Milestone 1.2: `prisma db seed` populates lookups and demo rows.
 8. Reviews endpoint: insert review rows and optional auto‑transition.
 9. Deed endpoints: draft, finalize (hash + owner flip in same transaction).
 10. Lookups endpoints including `transitions?from=<stage>` with dry‑run guards.
+11. (Moved from Phase 0, to run only after demo acceptance) Developer Dockerization:
+
+Add docker-compose.dev.yml for Postgres 16 + MinIO with named volumes.
+
+Provide .env.docker.example and overlay env loading in README.
+
+Add Makefile targets: make up, make down, make logs, make psql, make mc.
+
+Healthchecks for DB/MinIO; wait-for scripts in scripts/.
+
+Ensure Prisma points to container DB via env; MinIO creds from env.
+
+Milestone 2.D: docker compose -f docker-compose.dev.yml up brings DB/MinIO; API healthcheck 200.
 
 Milestone 2.1: All endpoints respond with mocked auth; Postman collection green.
 Milestone 2.2: Guard unit tests pass; sample flow executes end‑to‑end via API.
@@ -131,10 +144,10 @@ Milestone 6.1: Demo script runs in 15 minutes; team can operate the flow.
 
 
 ## Start Here (Next Actionable Steps)
-1. Phase 0 scaffolding and dev Docker Compose.
+1. Phase 0 scaffolding and local Postgres/MinIO (no Docker).
 2. Phase 1 Prisma schema + seed.
 3. Verify transitions and guards with a Postman flow before UI.
-
+4. After demo acceptance → run Phase 2 step 11 to enable Dockerized dev stack.
 
 ## Post‑MVP (Phase‑2)
 - RLS policies; KMS‑managed keys; PITR backups.
