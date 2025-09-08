@@ -10,6 +10,8 @@ import applicationRoutes from './routes/applications';
 import workflowRoutes from './routes/workflow';
 import pdfRoutes from './routes/pdf';
 import documentRoutes from './routes/documents';
+import personRoutes from './routes/persons';
+import plotRoutes from './routes/plots';
 
 // Load environment variables
 dotenv.config();
@@ -47,6 +49,8 @@ app.use('/api/applications', applicationRoutes);
 app.use('/api/workflow', workflowRoutes);
 app.use('/api/pdf', pdfRoutes);
 app.use('/api/documents', documentRoutes);
+app.use('/api/persons', personRoutes);
+app.use('/api/plots', plotRoutes);
 
 // API routes placeholder
 app.get('/api', (req, res) => {
