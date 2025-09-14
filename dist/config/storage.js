@@ -1,8 +1,12 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BUCKET_NAME = exports.minioClient = exports.getFileUrl = exports.deleteFile = exports.uploadFile = void 0;
 const minio_1 = require("minio");
 const logger_1 = require("./logger");
+const crypto_1 = __importDefault(require("crypto"));
 // MinIO/S3 Configuration
 const minioClient = new minio_1.Client({
     endPoint: process.env.MINIO_ENDPOINT || 'localhost',
@@ -38,6 +42,8 @@ const uploadFile = async (file, applicationId, docType) => {
         const fileExtension = file.originalname.split('.').pop() || '';
         const fileName = `${docType}_${timestamp}.${fileExtension}`;
         const objectName = `applications/${applicationId}/attachments/${fileName}`;
+        // Generate file hash
+        const hash = crypto_1.default.createHash('sha256').update(file.buffer).digest('hex');
         // Upload file to MinIO
         const uploadResult = await minioClient.putObject(BUCKET_NAME, objectName, file.buffer, file.size, {
             'Content-Type': file.mimetype,
@@ -53,6 +59,7 @@ const uploadFile = async (file, applicationId, docType) => {
             url: fileUrl,
             key: objectName,
             size: file.size,
+            hash: hash,
         };
     }
     catch (error) {

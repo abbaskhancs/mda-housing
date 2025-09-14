@@ -502,6 +502,27 @@ router.post('/:id/attachments', authenticateToken, validateParams(commonSchemas.
           throw createError(`Document type not specified for file: ${file.originalname}`, 400, 'MISSING_DOC_TYPE');
         }
 
+        // Validate docType
+        const allowedDocTypes = [
+          'AllotmentLetter',
+          'PrevTransferDeed',
+          'AttorneyDeed',
+          'GiftDeed',
+          'CNIC_Seller',
+          'CNIC_Buyer',
+          'CNIC_Attorney',
+          'UtilityBill_Latest',
+          'NOC_BuiltStructure',
+          'Photo_Seller',
+          'Photo_Buyer',
+          'PrevChallan',
+          'NOC_Water'
+        ];
+
+        if (!allowedDocTypes.includes(docType)) {
+          throw createError(`Invalid document type: ${docType}`, 400, 'INVALID_DOC_TYPE');
+        }
+
         // Upload file to storage
         const uploadResult = await uploadFile(file, application.id, docType);
 
