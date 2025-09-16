@@ -42,6 +42,7 @@ app.get('/health', (req, res) => {
 
 // Static file serving for storage
 app.use('/storage', express.static(path.join(process.cwd(), 'storage')));
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // API routes
 app.use('/api/auth', authRoutes);
@@ -88,7 +89,8 @@ process.on('uncaughtException', (error) => {
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
   logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  process.exit(1);
+  // Don't exit the process, just log the error
+  logger.warn('Continuing despite unhandled rejection...');
 });
 
 export default app;

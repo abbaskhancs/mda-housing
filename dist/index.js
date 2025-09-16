@@ -15,6 +15,8 @@ const applications_1 = __importDefault(require("./routes/applications"));
 const workflow_1 = __importDefault(require("./routes/workflow"));
 const pdf_1 = __importDefault(require("./routes/pdf"));
 const documents_1 = __importDefault(require("./routes/documents"));
+const persons_1 = __importDefault(require("./routes/persons"));
+const plots_1 = __importDefault(require("./routes/plots"));
 // Load environment variables
 dotenv_1.default.config();
 const app = (0, express_1.default)();
@@ -40,12 +42,15 @@ app.get('/health', (req, res) => {
 });
 // Static file serving for storage
 app.use('/storage', express_1.default.static(path_1.default.join(process.cwd(), 'storage')));
+app.use('/uploads', express_1.default.static(path_1.default.join(process.cwd(), 'uploads')));
 // API routes
 app.use('/api/auth', auth_1.default);
 app.use('/api/applications', applications_1.default);
 app.use('/api/workflow', workflow_1.default);
 app.use('/api/pdf', pdf_1.default);
 app.use('/api/documents', documents_1.default);
+app.use('/api/persons', persons_1.default);
+app.use('/api/plots', plots_1.default);
 // API routes placeholder
 app.get('/api', (req, res) => {
     res.json({
@@ -77,6 +82,7 @@ process.on('uncaughtException', (error) => {
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
     logger_1.logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
-    process.exit(1);
+    // Don't exit the process, just log the error
+    logger_1.logger.warn('Continuing despite unhandled rejection...');
 });
 exports.default = app;

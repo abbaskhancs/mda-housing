@@ -1,5 +1,5 @@
 import { Client } from 'minio';
-declare const minioClient: Client;
+declare let minioClient: Client | null;
 declare const BUCKET_NAME: string;
 export interface UploadResult {
     url: string;
