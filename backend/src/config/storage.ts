@@ -70,6 +70,9 @@ export const uploadFile = async (
     const fileName = `${docType}_${timestamp}.${fileExtension}`;
     const objectName = `applications/${applicationId}/attachments/${fileName}`;
 
+    // Generate file hash
+    const hash = crypto.createHash('sha256').update(file.buffer).digest('hex');
+
     // Upload file to MinIO
     const uploadResult = await minioClient.putObject(
       BUCKET_NAME,
@@ -94,6 +97,7 @@ export const uploadFile = async (
       url: fileUrl,
       key: objectName,
       size: file.size,
+      hash: hash,
     };
   } catch (error) {
     logger.error('Error uploading file to MinIO, falling back to local storage:', error);

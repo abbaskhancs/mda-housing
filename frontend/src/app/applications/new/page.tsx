@@ -217,7 +217,7 @@ export default function NewApplicationPage() {
           const singleForm = new FormData();
           singleForm.append("attachments", row.file as Blob, (row.file as File).name);
           singleForm.append("docType", row.docType);
-          singleForm.append(`isOriginalSeen_attachments`, row.isOriginalSeen ? "true" : "false");
+          singleForm.append("isOriginalSeen_attachments", row.isOriginalSeen ? "true" : "false");
 
           const up = await fetch(`http://localhost:3001/api/applications/${appId}/attachments`, {
             method: "POST",

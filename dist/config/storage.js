@@ -89,6 +89,8 @@ const uploadFile = async (file, applicationId, docType) => {
         const fileExtension = file.originalname.split('.').pop() || '';
         const fileName = `${docType}_${timestamp}.${fileExtension}`;
         const objectName = `applications/${applicationId}/attachments/${fileName}`;
+        // Generate file hash
+        const hash = crypto_1.default.createHash('sha256').update(file.buffer).digest('hex');
         // Upload file to MinIO
         const uploadResult = await minioClient.putObject(BUCKET_NAME, objectName, file.buffer, file.size, {
             'Content-Type': file.mimetype,
@@ -104,6 +106,7 @@ const uploadFile = async (file, applicationId, docType) => {
             url: fileUrl,
             key: objectName,
             size: file.size,
+            hash: hash,
         };
     }
     catch (error) {
