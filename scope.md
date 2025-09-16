@@ -112,6 +112,390 @@ Milestone 3.1: Each template renders with sample data and saves to MinIO. ✅ CO
 Milestone 4.1: ✅ Create new application and navigate to case file. (Completed)
 Milestone 4.2: ✅ Full flow click‑through in UI moves stages correctly. (Completed - Guard-aware actions implemented)
 
+### Phase 4.X — Frontend Completion for **Complete Housing Transfer Process**
+
+> Goal: every screen, button, and console works end-to-end for demoing the full transfer flow. No Docker/Security items here. Each step ends with a **Test & Validate** checklist the implementer must run before moving on.
+
+---
+
+#### 1) Wire “Create Application → Receipt → Scrutiny” end-to-end ✅ COMPLETED
+
+* ✅ Implement: `/applications/new` must create `Application`, upload attachments, immediately render/offer **Intake Receipt PDF** link, then move app to `UNDER_SCRUTINY`.
+* ✅ **Test & Validate**
+
+  * ✅ Create a new app; confirm toast shows the new **App No**.
+  * ✅ Receipt link opens a PDF with correct Urdu labels, QR, and app data.
+  * ✅ Case header shows **Stage: UNDER\_SCRUTINY** and a new **Audit** row (“CREATE\_APP”, “TRANSITION SUBMITTED→UNDER\_SCRUTINY”).
+
+**Implementation Notes:**
+- Receipt PDF generation using Puppeteer with proper Urdu fonts (Noto Nastaliq Urdu)
+- QR code generation linking to application details page
+- Auto-transition logic with guard evaluation (GUARD_INTAKE_COMPLETE)
+- Proper audit logging for all transitions
+- Frontend toast notification with App No and receipt download link
+- Guard correctly blocks transition when required documents are missing (expected behavior)
+
+---
+
+#### 2) Guard-aware action buttons (global)
+
+* Implement: For **every** action button, fetch `/workflow/transitions?from=<current>` and enable/disable with tooltip explaining unmet guards. Show inline spinner + disable during call.
+* **Test & Validate**
+
+  * On a fresh `UNDER_SCRUTINY` case, only **Send to BCA & Housing** is enabled; others are disabled with correct reasons.
+  * Trigger a blocked action; confirm no network call is fired and tooltip explains which guard blocks it.
+
+---
+
+#### 3) “Send to BCA & Housing” dispatch
+
+* Implement: Button calls `PATCH /api/applications/:id/transition` to `SENT_TO_BCA_HOUSING`. Ensure two **pending** `Clearance` rows exist/appear.
+* **Test & Validate**
+
+  * Stage becomes **SENT\_TO\_BCA\_HOUSING**; Summary tab shows BCA/Housing = **PENDING**.
+  * Audit shows a TRANSITION row with from/to stages.
+
+---
+
+#### 4) BCA console — CLEAR/OBJECTION with signed PDF
+
+* Implement: `/console/bca` list, detail panel with radio **CLEAR/OBJECTION**, remarks (required for objection), **Generate Clearance PDF** (stores URL), **Save** posts `POST /applications/:id/clearances`.
+* **Test & Validate**
+
+  * Mark **CLEAR**, save; BCA row shows **CLEAR** and a PDF link that opens.
+  * Mark **OBJECTION** on another app; stage auto moves to **ON\_HOLD\_BCA**; OWO sees objection text in Summary.
+
+---
+
+#### 5) Housing console — same as BCA
+
+* Implement: `/console/housing` mirrors BCA behavior.
+* **Test & Validate**
+
+  * When **both sections = CLEAR** and app is in `SENT_TO_BCA_HOUSING`, stage auto-moves to **BCA\_HOUSING\_CLEAR**; timeline updates; both clearance PDFs open.
+
+---
+
+#### 6) OWO review for BCA/Housing
+
+* Implement: **Mark BCA/Housing Reviewed** button creates `Review` (targetGroup `BCA_HOUSING`) and moves to `OWO_REVIEW_BCA_HOUSING`.
+* **Test & Validate**
+
+  * After click, a **Review** row appears (who/when/note) and stage reads **OWO\_REVIEW\_BCA\_HOUSING**.
+
+---
+
+#### 7) Dispatch to Accounts (guarded)
+
+* Implement: **Send to Accounts** becomes enabled only with OWO review present; transition to `SENT_TO_ACCOUNTS`.
+* **Test & Validate**
+
+  * Stage updates; Accounts tab becomes editable; Accounts **Clearance** shows **PENDING**.
+
+---
+
+#### 8) Accounts fee heads + challan generation
+
+* Implement: Editable grid for **arrears, surcharge, nonUser, transferFee, attorneyFee, water, suiGas, additional** with auto total + **amount in words**. **Generate Challan** persists challanNo/date and renders challan PDF.
+* **Test & Validate**
+
+  * Numbers format correctly; total updates live; challan PDF opens with same total & words.
+  * Audit shows “ACCOUNTS\_UPDATE”.
+
+---
+
+#### 9) Accounts — Pending Payment / On Hold
+
+* Implement: Buttons **Set Pending Payment** and **Raise Objection** set Accounts status and stage (`AWAITING_PAYMENT` or `ON_HOLD_ACCOUNTS`).
+* **Test & Validate**
+
+  * Stage changes appropriately; Summary shows Accounts status; OWO sees reason in Accounts card.
+
+---
+
+#### 10) Accounts — Mark Paid & Verified → Accounts CLEAR
+
+* Implement: **Mark Paid & Verified** posts `/accounts/verify-payment`, flips `paid=true`, creates/updates Accounts `Clearance=CLEAR`, and moves stage to **ACCOUNTS\_CLEAR** (if coming from `SENT_TO_ACCOUNTS`/`AWAITING_PAYMENT`).
+* **Test & Validate**
+
+  * Stage shows **ACCOUNTS\_CLEAR**; Clearance PDF (Accounts) link appears and opens.
+  * Refresh page: state persists; audit shows transition.
+
+---
+
+#### 11) OWO review for Accounts
+
+* Implement: **Mark Accounts Reviewed** inserts `Review` for group `ACCOUNTS`, moving to **OWO\_REVIEW\_ACCOUNTS**.
+* **Test & Validate**
+
+  * Review row appears; stage updates; **Send to Housing Officer** button becomes enabled (dry-run transitions reports READY\_FOR\_APPROVAL available).
+
+---
+
+#### 12) Auto-generate Dispatch Memo on “Send to Housing Officer”
+
+* Implement: Transition to `READY_FOR_APPROVAL` and render **Dispatch Memo PDF** listing attachments & clearances.
+* **Test & Validate**
+
+  * Stage: **READY\_FOR\_APPROVAL**.
+  * Memo PDF opens; contains Form #1, BCA/Housing/Accounts clearances, challan, CNICs, etc.
+
+---
+
+#### 13) Approval console — deed draft
+
+* Implement: `/console/approval` shows packet, **Deed Draft** form (deedNo, witness selection), **Generate Draft** (stores draft PDF URL).
+* **Test & Validate**
+
+  * Draft PDF opens with witness names; audit logs “DEED\_DRAFTED”.
+
+---
+
+#### 14) Approval console — capture photos/signatures
+
+* Implement: Inputs for seller/buyer/witness photos and signatures (file upload components), preview thumbnails; client-side size/type guard (no security features, just UX).
+* **Test & Validate**
+
+  * Uploads show previews; files persist; reopening page shows same files.
+
+---
+
+#### 15) Approve & Lock Deed (finalize)
+
+* Implement: **Approve & Lock** posts `/transfer-deed/finalize` with final PDF URL, hash, signatures → guarded transition to **APPROVED**; backend flips ownership.
+* **Test & Validate**
+
+  * Stage shows **APPROVED**; Deed card displays **hash** and final PDF; **Plot currentOwner** on Registers updates to **Transferee**.
+
+---
+
+#### 16) Post-entries & Close
+
+* Implement: Two buttons on Approval or OWO view: **Start Post-Entries** (`APPROVED→POST_ENTRIES`) and **Close Case** (`POST_ENTRIES→CLOSED`).
+* **Test & Validate**
+
+  * Stage sequence reflects actions; **CLOSED** badges appear in list views; exports include final owner.
+
+---
+
+#### 17) Summary tab — live section status panel
+
+* Implement: Compact panel showing BCA, HOUSING, ACCOUNTS status with color badges and links to their PDFs, plus latest remarks.
+* **Test & Validate**
+
+  * Objection remarks visible; clicking a badge opens respective PDF; statuses update without full page reload.
+
+---
+
+#### 18) Attachments grid — full CRUD + “Original seen”
+
+* Implement: Add/replace/delete attachments; “Original seen” toggle; verifier name/time; file preview where possible.
+* **Test & Validate**
+
+  * Toggling “Original seen” persists; deleted file disappears after refresh; verifier meta shows.
+
+---
+
+#### 19) Stage timeline (from Audit)
+
+* Implement: Timeline component reading `AuditLog` to render stage hops with actor and timestamps.
+* **Test & Validate**
+
+  * All transitions from the test case show in order; clicking a node reveals audit note.
+
+---
+
+#### 20) Global search + queues
+
+* Implement: Header search across App No, Plot, CNIC; queues for each console with filters by **stage**, **status**, **my pending**.
+* **Test & Validate**
+
+  * Searching CNIC or Plot lands on the right case; queues correctly filter by stage.
+
+---
+
+#### 21) Objection loop UX (BCA and Accounts)
+
+* Implement: On `ON_HOLD_BCA` and `ON_HOLD_ACCOUNTS`, show **Fix & Resubmit** CTA that takes OWO back to **UNDER\_SCRUTINY** (if needed) or re-dispatches to the blocked section after document fixes.
+* **Test & Validate**
+
+  * Trigger BCA OBJECTION, upload a missing doc, **Resend to BCA & Housing** becomes enabled; loop completes to **BCA\_HOUSING\_CLEAR**.
+
+---
+
+#### 22) Optional WATER section path
+
+* Implement: Toggle at intake (**Water NOC required?**). If yes, show WATER clearance row and console like BCA.
+* **Test & Validate**
+
+  * With Water enabled, **ALL\_SECTIONS\_IN\_GROUP\_CLEAR(BCA\_HOUSING)** must consider only BCA+HOUSING (Water independent); WATER objections do not block Accounts unless policy dictates (skip policy; just show independent row).
+  * WATER PDF opens.
+
+---
+
+#### 23) Amount-in-words helper parity
+
+* Implement: Same number → same words in **UI and challan PDF**. Centralize in a shared helper.
+* **Test & Validate**
+
+  * Change total; confirm both places show identical wording after rerender.
+
+---
+
+#### 24) Registers (read-only) parity
+
+* Implement: Registers list shows **current owner** from Plot; export CSV/PDF.
+* **Test & Validate**
+
+  * After approval, the plot record shows transferee as owner; export contains updated owner.
+
+---
+
+#### 25) Packet export (zip)
+
+* Implement: **Export Case Packet** button (any tab) hits `/api/applications/:id/packet` to download zip of Docs #1–#5.
+* **Test & Validate**
+
+  * Zip downloads; opening shows intake receipt, clearances, challan, memo, deed.
+
+---
+
+#### 26) Print controls (per-tab)
+
+* Implement: **Print** actions for each tab with server PDF where available; fallback to client print of a read view.
+* **Test & Validate**
+
+  * Printing Clearances uses server PDF; printing Accounts uses challan/clearance PDFs; layout is A4.
+
+---
+
+#### 27) Role switch & RBAC UX (frontend only)
+
+* Implement: Simple role switcher (top-right) to simulate logging as OWO/BCA/HOUSING/ACCOUNTS/APPROVER; hide actions not relevant to role.
+* **Test & Validate**
+
+  * As BCA, only BCA console visible; as APPROVER, only Approval console and case view actions relevant to approval.
+
+---
+
+#### 28) Error & conflict UX (frontend only)
+
+* Implement: Friendly banners for guard failures (`422`) showing the **guardName** and unmet condition; handle **409** (stale) by offering **Reload**.
+* **Test & Validate**
+
+  * Try a blocked transition: banner shows exact guard; simulate stale update to see 409 flow.
+
+---
+
+#### 29) Localization polish
+
+* Implement: Urdu/English toggle persists across pages; Urdu strings on PDFs and UI labels match templates.
+* **Test & Validate**
+
+  * Toggle changes field labels and titles; PDFs remain in Urdu as designed.
+
+---
+
+#### 30) Guided E2E script button
+
+* Implement: On `/applications/[id]`, developer-only **Run E2E Demo** button that:
+
+  * Jumps through stages in sequence by calling the same APIs the UI does (with confirmations), generating placeholders for PDFs/signatures where missing (UI triggers, not backend mocks).
+* **Test & Validate**
+
+  * Running on a fresh case completes all stages to **CLOSED** without manual API calls; each intermediate screen updates as if user clicked through.
+
+---
+
+#### 31) Seeded demo records (UI command)
+
+* Implement: “Insert Demo Data” action in a dev-only admin screen to create 5–10 cases across various stages (using public endpoints).
+* **Test & Validate**
+
+  * After running, queues show mixed-stage cases; each opens without errors and PDFs exist where expected.
+
+---
+
+#### 32) Pagination & sorting everywhere
+
+* Implement: Standardize table pagination (page size selector) and sorting on App No, Date, Stage.
+* **Test & Validate**
+
+  * Sorting works across consoles and registers; pagination retains filters.
+
+---
+
+#### 33) Attachment type coverage check
+
+* Implement: Intake checklist shows all docTypes from the spec; missing types render a warning chip.
+* **Test & Validate**
+
+  * Creating a case without a required doc shows a non-blocking warning (since Accounts/BCA might still object); warning disappears once uploaded.
+
+---
+
+#### 34) Transition previews (dry-run)
+
+* Implement: **What’s next?** popover that calls `/workflow/transitions?from=<current>` and lists all potential next stages with the server-evaluated `enabled` flag and reason.
+* **Test & Validate**
+
+  * At each stage, the popover accurately reflects the next valid edges; reasons match tooltips.
+
+---
+
+#### 35) Bulk actions for consoles
+
+* Implement: In BCA/Housing/Accounts consoles, enable multi-select rows → **Set PENDING/CLEAR/OBJECTION** (where meaningful) with a confirmation modal and required remarks for objections (posts per-row).
+* **Test & Validate**
+
+  * Select 2+ cases; apply CLEAR; statuses update; failures surface per-row with reasons.
+
+---
+
+#### 36) Numbers & currency formatting
+
+* Implement: All amounts show with thousand separators; inputs accept only numerics and two decimals.
+* **Test & Validate**
+
+  * Enter invalid characters; field rejects; total never becomes NaN.
+
+---
+
+#### 37) CNIC/Plot quick create from intake
+
+* Implement: If person/plot not found, inline **Create** modals add minimal records then bind to intake form.
+* **Test & Validate**
+
+  * Create a new person from modal; it appears immediately in the selector; saved app references new IDs.
+
+---
+
+#### 38) Sticky state on refresh
+
+* Implement: After any successful transition, the page stores `updatedAt` and **currentStage**; upon reload, it refetches and warns if changed.
+* **Test & Validate**
+
+  * Trigger a stage change from another tab/window; current tab shows a **Case updated** banner with reload CTA.
+
+---
+
+#### 39) Per-stage empty states
+
+* Implement: Friendly guidance text + CTA when a tab is not yet relevant (e.g., Accounts tab before `SENT_TO_ACCOUNTS`).
+* **Test & Validate**
+
+  * Navigate to Accounts before dispatch; see guidance, not errors.
+
+---
+
+#### 40) Final Demo Checklist (must pass)
+
+* Create → Scrutiny → BCA/Housing CLEAR → OWO Review → Send to Accounts → Challan → Paid & Verified → Accounts CLEAR → OWO Review → Send to Housing Officer (Memo) → Deed Draft → Signatures → Approve & Lock → Post-entries → Close.
+* **Test & Validate**
+
+  * At each step: stage badge updates, PDFs open, audit timeline adds a row, disabled/enabled buttons match guards, and Registers show the ownership flip after approval.
+
+
 Phase 4.5 – Developer Dockerization (0.5 day; runs after Phase 4, before Phase 5)
 
 Add docker-compose.dev.yml for Postgres 16 + MinIO with named volumes.

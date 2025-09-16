@@ -37,6 +37,7 @@ exports.BUCKET_NAME = exports.minioClient = exports.getFileUrl = exports.deleteF
 const minio_1 = require("minio");
 const logger_1 = require("./logger");
 const localStorage = __importStar(require("./localStorage"));
+const crypto = __importStar(require("crypto"));
 // Storage configuration - use MinIO if available, otherwise use local storage
 const USE_MINIO = process.env.USE_MINIO === 'true';
 // MinIO/S3 Configuration
@@ -90,7 +91,7 @@ const uploadFile = async (file, applicationId, docType) => {
         const fileName = `${docType}_${timestamp}.${fileExtension}`;
         const objectName = `applications/${applicationId}/attachments/${fileName}`;
         // Generate file hash
-        const hash = crypto_1.default.createHash('sha256').update(file.buffer).digest('hex');
+        const hash = crypto.createHash('sha256').update(file.buffer).digest('hex');
         // Upload file to MinIO
         const uploadResult = await minioClient.putObject(BUCKET_NAME, objectName, file.buffer, file.size, {
             'Content-Type': file.mimetype,

@@ -1,6 +1,7 @@
 import { Client } from 'minio';
 import { logger } from './logger';
 import * as localStorage from './localStorage';
+import * as crypto from 'crypto';
 
 // Storage configuration - use MinIO if available, otherwise use local storage
 const USE_MINIO = process.env.USE_MINIO === 'true';

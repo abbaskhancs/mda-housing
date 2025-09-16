@@ -174,11 +174,85 @@ router.post('/', authenticateToken, uploadMultiple('attachments', 20), validate(
     // Don't fail the request if receipt generation fails
   }
 
+  // Auto-transition from SUBMITTED to UNDER_SCRUTINY after receipt generation
+  let finalApplication = result.application;
+  try {
+    const underScrutinyStage = await prisma.wfStage.findFirst({
+      where: { code: 'UNDER_SCRUTINY' }
+    });
+
+    if (underScrutinyStage) {
+      // Check if transition exists
+      const transition = await prisma.wfTransition.findFirst({
+        where: {
+          fromStageId: result.application.currentStageId,
+          toStageId: underScrutinyStage.id
+        }
+      });
+
+      if (transition) {
+        // Execute guard evaluation
+        const guardContext = {
+          applicationId: result.application.id,
+          userId: req.user!.id,
+          userRole: req.user!.role,
+          fromStageId: result.application.currentStageId,
+          toStageId: underScrutinyStage.id,
+          additionalData: { autoTransition: true }
+        };
+
+        if (validateGuardContext(guardContext)) {
+          const guardResult = await executeGuard(transition.guardName, guardContext);
+
+          if (guardResult.canTransition) {
+            // Perform the transition
+            finalApplication = await prisma.application.update({
+              where: { id: result.application.id },
+              data: {
+                previousStageId: result.application.currentStageId,
+                currentStageId: underScrutinyStage.id
+              },
+              include: {
+                seller: true,
+                buyer: true,
+                attorney: true,
+                plot: true,
+                currentStage: true,
+                previousStage: true
+              }
+            });
+
+            // Create audit log for auto-transition
+            await prisma.auditLog.create({
+              data: {
+                applicationId: result.application.id,
+                userId: req.user!.id,
+                action: 'AUTO_STAGE_TRANSITION',
+                fromStageId: result.application.currentStageId,
+                toStageId: underScrutinyStage.id,
+                details: `Auto-transitioned from SUBMITTED to UNDER_SCRUTINY after receipt generation`,
+                ipAddress: req.ip,
+                userAgent: req.get('User-Agent')
+              }
+            });
+
+            logger.info(`Auto-transitioned application ${result.application.id} to UNDER_SCRUTINY`);
+          } else {
+            logger.warn(`Auto-transition blocked by guard: ${guardResult.reason}`);
+          }
+        }
+      }
+    }
+  } catch (error) {
+    logger.error(`Error during auto-transition for application ${result.application.id}:`, error);
+    // Don't fail the request if auto-transition fails
+  }
+
   logger.info(`Application created: ${result.application.id} by user ${req.user!.username} with ${result.attachments.length} attachments`);
 
   res.status(201).json({
     message: 'Application created successfully',
-    application: result.application,
+    application: finalApplication,
     attachments: result.attachments,
     receiptUrl
   });

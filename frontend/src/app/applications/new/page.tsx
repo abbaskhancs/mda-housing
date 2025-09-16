@@ -77,6 +77,11 @@ export default function NewApplicationPage() {
     { id: crypto.randomUUID(), file: null, docType: "", isOriginalSeen: false }
   ]);
   const [error, setError] = React.useState<string | null>(null);
+  const [successData, setSuccessData] = React.useState<{
+    applicationNumber: string;
+    applicationId: string;
+    receiptUrl: string | null;
+  } | null>(null);
 
   const addRow = React.useCallback(() => {
     setAttachments(prev => [...prev, { id: crypto.randomUUID(), file: null, docType: "", isOriginalSeen: false }]);
@@ -233,9 +238,21 @@ export default function NewApplicationPage() {
         }
       }
 
-      router.replace(`/applications/${appId}`);
-    } catch (e: any) {
-      setError(e?.message || "Unexpected error");
+      // Show success toast with application details
+      setSuccessData({
+        applicationNumber: created.application.applicationNumber,
+        applicationId: appId,
+        receiptUrl: created.receiptUrl
+      });
+      setError(null);
+
+      // Redirect after a short delay to allow user to see the toast
+      setTimeout(() => {
+        router.replace(`/applications/${appId}`);
+      }, 3000);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Unexpected error");
+      setSuccessData(null);
     }
   }, [attachments, router, token]);
 
@@ -260,8 +277,8 @@ export default function NewApplicationPage() {
                 {errors.sellerCnic && <span style={{ color: "#c00" }}>Valid CNIC required (12345-1234567-1)</span>}
               </div>
               <div>
-                <label>Father's Name / والد کا نام *</label>
-                <input {...register("sellerFatherName", { required: true })} placeholder="Father's name" style={{ width: "100%", padding: 8, border: "1px solid #ccc", borderRadius: 4 }} />
+                <label>Father&apos;s Name / والد کا نام *</label>
+                <input {...register("sellerFatherName", { required: true })} placeholder="Father&apos;s name" style={{ width: "100%", padding: 8, border: "1px solid #ccc", borderRadius: 4 }} />
                 {errors.sellerFatherName && <span style={{ color: "#c00" }}>Required</span>}
               </div>
               <div>
@@ -297,8 +314,8 @@ export default function NewApplicationPage() {
                 {errors.buyerCnic && <span style={{ color: "#c00" }}>Valid CNIC required (12345-1234567-1)</span>}
               </div>
               <div>
-                <label>Father's Name / والد کا نام *</label>
-                <input {...register("buyerFatherName", { required: true })} placeholder="Father's name" style={{ width: "100%", padding: 8, border: "1px solid #ccc", borderRadius: 4 }} />
+                <label>Father&apos;s Name / والد کا نام *</label>
+                <input {...register("buyerFatherName", { required: true })} placeholder="Father&apos;s name" style={{ width: "100%", padding: 8, border: "1px solid #ccc", borderRadius: 4 }} />
                 {errors.buyerFatherName && <span style={{ color: "#c00" }}>Required</span>}
               </div>
               <div>
@@ -333,8 +350,8 @@ export default function NewApplicationPage() {
                 {errors.attorneyCnic && <span style={{ color: "#c00" }}>Valid CNIC required (12345-1234567-1)</span>}
               </div>
               <div>
-                <label>Father's Name / والد کا نام</label>
-                <input {...register("attorneyFatherName")} placeholder="Father's name" style={{ width: "100%", padding: 8, border: "1px solid #ccc", borderRadius: 4 }} />
+                <label>Father&apos;s Name / والد کا نام</label>
+                <input {...register("attorneyFatherName")} placeholder="Father&apos;s name" style={{ width: "100%", padding: 8, border: "1px solid #ccc", borderRadius: 4 }} />
               </div>
               <div>
                 <label>Phone / فون</label>
@@ -421,6 +438,43 @@ export default function NewApplicationPage() {
           </div>
 
           {error && <div style={{ color: "#c00", marginTop: 12 }}>{error}</div>}
+
+          {successData && (
+            <div style={{
+              backgroundColor: "#d4edda",
+              color: "#155724",
+              padding: 16,
+              borderRadius: 8,
+              marginTop: 12,
+              border: "1px solid #c3e6cb"
+            }}>
+              <h4 style={{ margin: "0 0 8px 0", fontSize: 16 }}>
+                ✅ Application Created Successfully! / درخواست کامیابی سے بن گئی!
+              </h4>
+              <p style={{ margin: "4px 0", fontSize: 14 }}>
+                <strong>Application No:</strong> {successData.applicationNumber}
+              </p>
+              {successData.receiptUrl && (
+                <p style={{ margin: "8px 0 0 0" }}>
+                  <a
+                    href={successData.receiptUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      color: "#0066cc",
+                      textDecoration: "underline",
+                      fontSize: 14
+                    }}
+                  >
+                    📄 Download Intake Receipt PDF / رسید ڈاؤن لوڈ کریں
+                  </a>
+                </p>
+              )}
+              <p style={{ margin: "8px 0 0 0", fontSize: 12, fontStyle: "italic" }}>
+                Redirecting to application details in 3 seconds...
+              </p>
+            </div>
+          )}
 
           <div style={{ marginTop: 24, display: "flex", gap: 12 }}>
             <button type="submit" disabled={isSubmitting}>
