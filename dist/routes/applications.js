@@ -17,6 +17,26 @@ const reviewService_1 = require("../services/reviewService");
 const deedService_1 = require("../services/deedService");
 const router = (0, express_1.Router)();
 const prisma = new client_1.PrismaClient();
+// Allowed document types
+const allowedDocTypes = [
+    'AllotmentLetter',
+    'PrevTransferDeed',
+    'AttorneyDeed',
+    'GiftDeed',
+    'CNIC_Seller',
+    'CNIC_Buyer',
+    'CNIC_Attorney',
+    'UtilityBill_Latest',
+    'NOC_BuiltStructure',
+    'Photo_Seller',
+    'Photo_Buyer',
+    'PrevChallan',
+    'NOC_Water'
+];
+// Helper function to validate document type
+const validateDocType = (docType) => {
+    return allowedDocTypes.includes(docType);
+};
 /**
  * POST /api/applications
  * Create new application with attachments and receipt generation
@@ -82,6 +102,9 @@ router.post('/', auth_1.authenticateToken, (0, upload_1.uploadMultiple)('attachm
                     const docType = req.body[`docType_${file.fieldname}`] || req.body.docType;
                     if (!docType) {
                         throw (0, errorHandler_1.createError)(`Document type not specified for file: ${file.originalname}`, 400, 'MISSING_DOC_TYPE');
+                    }
+                    if (!validateDocType(docType)) {
+                        throw (0, errorHandler_1.createError)(`Invalid document type: ${docType}`, 400, 'INVALID_DOC_TYPE');
                     }
                     // Upload file to storage
                     const uploadResult = await (0, storage_1.uploadFile)(file, application.id, docType);
@@ -440,6 +463,9 @@ router.post('/:id/attachments', auth_1.authenticateToken, (0, validation_1.valid
                 const docType = req.body[`docType_${file.fieldname}`] || req.body.docType;
                 if (!docType) {
                     throw (0, errorHandler_1.createError)(`Document type not specified for file: ${file.originalname}`, 400, 'MISSING_DOC_TYPE');
+                }
+                if (!validateDocType(docType)) {
+                    throw (0, errorHandler_1.createError)(`Invalid document type: ${docType}`, 400, 'INVALID_DOC_TYPE');
                 }
                 // Upload file to storage
                 const uploadResult = await (0, storage_1.uploadFile)(file, application.id, docType);

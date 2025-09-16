@@ -8,30 +8,7 @@ const storage = multer.memoryStorage();
 
 // File filter function
 const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  // Allowed document types
-  const allowedDocTypes = [
-    'AllotmentLetter',
-    'PrevTransferDeed',
-    'AttorneyDeed',
-    'GiftDeed',
-    'CNIC_Seller',
-    'CNIC_Buyer',
-    'CNIC_Attorney',
-    'UtilityBill_Latest',
-    'NOC_BuiltStructure',
-    'Photo_Seller',
-    'Photo_Buyer',
-    'PrevChallan',
-    'NOC_Water'
-  ];
-
-  // Check if docType is provided in the request body
-  const docType = req.body.docType;
-  if (!docType || !allowedDocTypes.includes(docType)) {
-    return cb(createError('Invalid or missing document type', 400, 'INVALID_DOC_TYPE'));
-  }
-
-  // Allowed file types
+  // Allowed file types - we'll validate docType in the route handler instead
   const allowedMimeTypes = [
     'application/pdf',
     'image/jpeg',

@@ -1,0 +1,9 @@
+This is a dummy document for testing file upload functionality.
+
+Application Details:
+- Applicant Name: Test User
+- CNIC: 12345-1234567-1
+- Plot Number: P-001
+- Application Type: New Construction
+
+This document serves as a test attachment for the MDA Housing application system.

@@ -17,6 +17,28 @@ import { createDeedDraft, finalizeDeed, getTransferDeed, updateDeedDraft } from 
 const router = Router();
 const prisma = new PrismaClient();
 
+// Allowed document types
+const allowedDocTypes = [
+  'AllotmentLetter',
+  'PrevTransferDeed',
+  'AttorneyDeed',
+  'GiftDeed',
+  'CNIC_Seller',
+  'CNIC_Buyer',
+  'CNIC_Attorney',
+  'UtilityBill_Latest',
+  'NOC_BuiltStructure',
+  'Photo_Seller',
+  'Photo_Buyer',
+  'PrevChallan',
+  'NOC_Water'
+];
+
+// Helper function to validate document type
+const validateDocType = (docType: string): boolean => {
+  return allowedDocTypes.includes(docType);
+};
+
 /**
  * POST /api/applications
  * Create new application with attachments and receipt generation
@@ -87,9 +109,13 @@ router.post('/', authenticateToken, uploadMultiple('attachments', 20), validate(
         try {
           // Get docType from request body (should be provided for each file)
           const docType = req.body[`docType_${file.fieldname}`] || req.body.docType;
-          
+
           if (!docType) {
             throw createError(`Document type not specified for file: ${file.originalname}`, 400, 'MISSING_DOC_TYPE');
+          }
+
+          if (!validateDocType(docType)) {
+            throw createError(`Invalid document type: ${docType}`, 400, 'INVALID_DOC_TYPE');
           }
 
           // Upload file to storage
@@ -497,9 +523,13 @@ router.post('/:id/attachments', authenticateToken, validateParams(commonSchemas.
       try {
         // Get docType from request body
         const docType = req.body[`docType_${file.fieldname}`] || req.body.docType;
-        
+
         if (!docType) {
           throw createError(`Document type not specified for file: ${file.originalname}`, 400, 'MISSING_DOC_TYPE');
+        }
+
+        if (!validateDocType(docType)) {
+          throw createError(`Invalid document type: ${docType}`, 400, 'INVALID_DOC_TYPE');
         }
 
         // Upload file to storage

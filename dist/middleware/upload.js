@@ -11,28 +11,7 @@ const logger_1 = require("../config/logger");
 const storage = multer_1.default.memoryStorage();
 // File filter function
 const fileFilter = (req, file, cb) => {
-    // Allowed document types
-    const allowedDocTypes = [
-        'AllotmentLetter',
-        'PrevTransferDeed',
-        'AttorneyDeed',
-        'GiftDeed',
-        'CNIC_Seller',
-        'CNIC_Buyer',
-        'CNIC_Attorney',
-        'UtilityBill_Latest',
-        'NOC_BuiltStructure',
-        'Photo_Seller',
-        'Photo_Buyer',
-        'PrevChallan',
-        'NOC_Water'
-    ];
-    // Check if docType is provided in the request body
-    const docType = req.body.docType;
-    if (!docType || !allowedDocTypes.includes(docType)) {
-        return cb((0, errorHandler_1.createError)('Invalid or missing document type', 400, 'INVALID_DOC_TYPE'));
-    }
-    // Allowed file types
+    // Allowed file types - we'll validate docType in the route handler instead
     const allowedMimeTypes = [
         'application/pdf',
         'image/jpeg',
