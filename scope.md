@@ -100,17 +100,17 @@ Milestone 2.2: ✅ Guard unit tests pass; sample flow executes end‑to‑end vi
 Milestone 3.1: Each template renders with sample data and saves to MinIO. ✅ COMPLETED
 
 
-### Phase 4 – Frontend (2–3 days)
+### Phase 4 – Frontend (2–3 days) ✅ COMPLETED
 1. ✅ Next.js app scaffolding; auth guard; role‑based navigation. (Completed)
 2. ✅ `/applications/new`: intake form (Urdu/English), attachments grid with “Original seen”.
 3. ✅ `/applications/[id]`: case file with tabs (Summary, Attachments, Clearances, Accounts, Deed, Audit).
-4. Guard‑aware actions using `/workflow/transitions` to enable/disable buttons with reasons.
-5. Consoles: `/console/bca`, `/console/housing`, `/console/accounts` with queues and actions.
-6. `/console/approval`: deed capture and approve & lock.
-7. Registers (read‑only) pages with filters and export.
+4. ✅ Guard‑aware actions using `/workflow/transitions` to enable/disable buttons with reasons. (Completed)
+5. ✅ Consoles: `/console/bca`, `/console/housing`, `/console/accounts` with queues and actions. (Completed)
+6. ✅ `/console/approval`: deed capture and approve & lock. (Completed)
+7. ✅ Registers (read‑only) pages with filters and export. (Completed)
 
-Milestone 4.1: Create new application and navigate to case file.
-Milestone 4.2: Full flow click‑through in UI moves stages correctly.
+Milestone 4.1: ✅ Create new application and navigate to case file. (Completed)
+Milestone 4.2: ✅ Full flow click‑through in UI moves stages correctly. (Completed - Guard-aware actions implemented)
 
 Phase 4.5 – Developer Dockerization (0.5 day; runs after Phase 4, before Phase 5)
 

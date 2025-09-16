@@ -3,21 +3,23 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "../contexts/AuthContext";
-import { 
-  HomeIcon, 
-  DocumentPlusIcon, 
+import {
+  HomeIcon,
+  DocumentPlusIcon,
   ClipboardDocumentListIcon,
   BuildingOfficeIcon,
   CurrencyDollarIcon,
   CheckCircleIcon,
   CogIcon,
-  UserGroupIcon
+  UserGroupIcon,
+  TableCellsIcon
 } from "@heroicons/react/24/outline";
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: HomeIcon, roles: ['ADMIN', 'BCA', 'HOUSING', 'ACCOUNTS', 'APPROVER', 'OWO'] },
   { name: 'New Application', href: '/applications/new', icon: DocumentPlusIcon, roles: ['ADMIN', 'OWO'] },
   { name: 'Applications', href: '/applications', icon: ClipboardDocumentListIcon, roles: ['ADMIN', 'BCA', 'HOUSING', 'ACCOUNTS', 'APPROVER', 'OWO'] },
+  { name: 'Registers', href: '/registers', icon: TableCellsIcon, roles: ['ADMIN', 'BCA', 'HOUSING', 'ACCOUNTS', 'APPROVER', 'OWO'] },
   { name: 'BCA Console', href: '/console/bca', icon: BuildingOfficeIcon, roles: ['ADMIN', 'BCA'] },
   { name: 'Housing Console', href: '/console/housing', icon: BuildingOfficeIcon, roles: ['ADMIN', 'HOUSING'] },
   { name: 'Accounts Console', href: '/console/accounts', icon: CurrencyDollarIcon, roles: ['ADMIN', 'ACCOUNTS'] },
