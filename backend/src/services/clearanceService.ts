@@ -20,7 +20,8 @@ export const createClearance = async (
   statusId: string,
   remarks: string | null,
   userId: string,
-  signedPdfUrl?: string
+  signedPdfUrl?: string,
+  userRole?: string
 ): Promise<ClearanceResult> => {
   try {
     // Use transaction to ensure atomicity
@@ -121,7 +122,9 @@ export const createClearance = async (
       applicationId,
       result.application.currentStageId,
       result.section.code,
-      result.status.code
+      result.status.code,
+      userId,
+      userRole || 'ADMIN' // Default to ADMIN if not provided
     );
 
     return {
@@ -138,7 +141,9 @@ const checkAutoProgress = async (
   applicationId: string,
   currentStageId: string,
   sectionCode: string,
-  statusCode: string
+  statusCode: string,
+  userId: string,
+  userRole: string
 ): Promise<ClearanceResult['autoTransition']> => {
   try {
     // Get current stage
@@ -159,12 +164,20 @@ const checkAutoProgress = async (
       if (currentStage.code === 'BCA_PENDING') {
         nextStageCode = 'BCA_HOUSING_CLEAR';
         guardName = 'GUARD_BCA_CLEAR';
+      } else if (currentStage.code === 'SENT_TO_BCA_HOUSING') {
+        // Check if both BCA and Housing are now clear
+        nextStageCode = 'BCA_HOUSING_CLEAR';
+        guardName = 'GUARD_CLEARANCES_COMPLETE';
       }
     } else if (sectionCode === 'HOUSING' && statusCode === 'CLEAR') {
       // Housing cleared - check if we should move to BCA_HOUSING_CLEAR
       if (currentStage.code === 'HOUSING_PENDING') {
         nextStageCode = 'BCA_HOUSING_CLEAR';
         guardName = 'GUARD_HOUSING_CLEAR';
+      } else if (currentStage.code === 'SENT_TO_BCA_HOUSING') {
+        // Check if both BCA and Housing are now clear
+        nextStageCode = 'BCA_HOUSING_CLEAR';
+        guardName = 'GUARD_CLEARANCES_COMPLETE';
       }
     } else if (sectionCode === 'BCA' && statusCode === 'OBJECTION') {
       // BCA objection - move to ON_HOLD_BCA
@@ -196,8 +209,8 @@ const checkAutoProgress = async (
     // Execute guard to validate transition
     const guardContext = {
       applicationId,
-      userId: '', // Will be set by the endpoint
-      userRole: '', // Will be set by the endpoint
+      userId,
+      userRole,
       fromStageId: currentStageId,
       toStageId: nextStage.id,
       additionalData: {}
@@ -232,7 +245,7 @@ const checkAutoProgress = async (
     await prisma.auditLog.create({
       data: {
         applicationId,
-        userId: '', // Will be set by the endpoint
+        userId,
         action: 'AUTO_STAGE_TRANSITION',
         fromStageId: currentStageId,
         toStageId: nextStage.id,

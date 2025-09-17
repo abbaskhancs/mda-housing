@@ -726,6 +726,122 @@ export const GUARD_APPROVAL_REJECTED: GuardFunction = async (context: GuardConte
 };
 
 /**
+ * GUARD_SENT_TO_BCA_HOUSING: Create pending clearances for BCA and Housing when transitioning to SENT_TO_BCA_HOUSING
+ */
+export const GUARD_SENT_TO_BCA_HOUSING: GuardFunction = async (context: GuardContext): Promise<GuardResult> => {
+  try {
+    const application = await prisma.application.findUnique({
+      where: { id: context.applicationId },
+      include: {
+        clearances: {
+          include: {
+            section: true,
+            status: true
+          }
+        }
+      }
+    });
+
+    if (!application) {
+      return {
+        canTransition: false,
+        reason: 'Application not found'
+      };
+    }
+
+    // Get BCA and Housing sections, and PENDING status
+    const [bcaSection, housingSection, pendingStatus] = await Promise.all([
+      prisma.wfSection.findFirst({ where: { code: 'BCA' } }),
+      prisma.wfSection.findFirst({ where: { code: 'HOUSING' } }),
+      prisma.wfStatus.findFirst({ where: { code: 'PENDING' } })
+    ]);
+
+    if (!bcaSection || !housingSection || !pendingStatus) {
+      return {
+        canTransition: false,
+        reason: 'Required sections or status not found'
+      };
+    }
+
+    // Check if clearances already exist
+    const existingBcaClearance = application.clearances.find(
+      clearance => clearance.sectionId === bcaSection.id
+    );
+    const existingHousingClearance = application.clearances.find(
+      clearance => clearance.sectionId === housingSection.id
+    );
+
+    // Create pending clearances if they don't exist
+    const clearancesToCreate: Array<{
+      applicationId: string;
+      sectionId: string;
+      statusId: string;
+      remarks: string;
+    }> = [];
+
+    if (!existingBcaClearance) {
+      clearancesToCreate.push({
+        applicationId: context.applicationId,
+        sectionId: bcaSection.id,
+        statusId: pendingStatus.id,
+        remarks: 'Sent to BCA for clearance'
+      });
+    }
+
+    if (!existingHousingClearance) {
+      clearancesToCreate.push({
+        applicationId: context.applicationId,
+        sectionId: housingSection.id,
+        statusId: pendingStatus.id,
+        remarks: 'Sent to Housing for clearance'
+      });
+    }
+
+    // Create clearances in a transaction
+    if (clearancesToCreate.length > 0) {
+      await prisma.$transaction(async (tx) => {
+        for (const clearanceData of clearancesToCreate) {
+          await tx.clearance.create({
+            data: clearanceData
+          });
+        }
+
+        // Create audit log entries
+        for (const clearanceData of clearancesToCreate) {
+          const section = clearanceData.sectionId === bcaSection.id ? 'BCA' : 'HOUSING';
+          await tx.auditLog.create({
+            data: {
+              applicationId: context.applicationId,
+              userId: context.userId,
+              action: 'CLEARANCE_CREATED',
+              details: `Pending clearance created for ${section} section`,
+              ipAddress: undefined,
+              userAgent: undefined
+            }
+          });
+        }
+      });
+    }
+
+    return {
+      canTransition: true,
+      reason: 'Application sent to BCA & Housing with pending clearances created',
+      metadata: {
+        clearancesCreated: clearancesToCreate.length,
+        bcaExists: !!existingBcaClearance,
+        housingExists: !!existingHousingClearance
+      }
+    };
+  } catch (error) {
+    logger.error('GUARD_SENT_TO_BCA_HOUSING error:', error);
+    return {
+      canTransition: false,
+      reason: 'Error creating pending clearances'
+    };
+  }
+};
+
+/**
  * GUARD_DEED_FINALIZED: Check if transfer deed has been finalized
  */
 export const GUARD_DEED_FINALIZED: GuardFunction = async (context: GuardContext): Promise<GuardResult> => {
@@ -788,6 +904,7 @@ export const GUARD_DEED_FINALIZED: GuardFunction = async (context: GuardContext)
 export const GUARDS: Record<string, GuardFunction> = {
   GUARD_INTAKE_COMPLETE,
   GUARD_SCRUTINY_COMPLETE,
+  GUARD_SENT_TO_BCA_HOUSING,
   GUARD_BCA_CLEAR,
   GUARD_BCA_OBJECTION,
   GUARD_HOUSING_CLEAR,

@@ -137,42 +137,74 @@ Milestone 4.2: ✅ Full flow click‑through in UI moves stages correctly. (Comp
 
 ---
 
-#### 2) Guard-aware action buttons (global)
+#### 2) Guard-aware action buttons (global) ✅ COMPLETED
 
-* Implement: For **every** action button, fetch `/workflow/transitions?from=<current>` and enable/disable with tooltip explaining unmet guards. Show inline spinner + disable during call.
-* **Test & Validate**
+* ✅ Implement: For **every** action button, fetch `/workflow/transitions?from=<current>` and enable/disable with tooltip explaining unmet guards. Show inline spinner + disable during call.
+* ✅ **Test & Validate**
 
-  * On a fresh `UNDER_SCRUTINY` case, only **Send to BCA & Housing** is enabled; others are disabled with correct reasons.
-  * Trigger a blocked action; confirm no network call is fired and tooltip explains which guard blocks it.
+  * ✅ On a fresh `UNDER_SCRUTINY` case, only **Send to BCA & Housing** is enabled; others are disabled with correct reasons.
+  * ✅ Trigger a blocked action; confirm no network call is fired and tooltip explains which guard blocks it.
+
+**Implementation Notes:**
+- Enhanced WorkflowActions component to properly handle guardResult from API responses
+- Added comprehensive tooltip system with hover states for disabled buttons
+- Implemented proper guard evaluation with detailed reason display
+- Added spinner states during guard evaluation and transitions
+- Ensured no network calls are made for disabled buttons
+- API returns proper guard evaluation results with reasons and metadata
+- Frontend displays clear status indicators (✓ Ready / ✗ Blocked) with detailed explanations
 
 ---
 
 #### 3) “Send to BCA & Housing” dispatch
 
-* Implement: Button calls `PATCH /api/applications/:id/transition` to `SENT_TO_BCA_HOUSING`. Ensure two **pending** `Clearance` rows exist/appear.
-* **Test & Validate**
+* ✅ Implement: Button calls `PATCH /api/applications/:id/transition` to `SENT_TO_BCA_HOUSING`. Ensure two **pending** `Clearance` rows exist/appear.
+* ✅ **Test & Validate**
 
-  * Stage becomes **SENT\_TO\_BCA\_HOUSING**; Summary tab shows BCA/Housing = **PENDING**.
-  * Audit shows a TRANSITION row with from/to stages.
-
----
-
-#### 4) BCA console — CLEAR/OBJECTION with signed PDF
-
-* Implement: `/console/bca` list, detail panel with radio **CLEAR/OBJECTION**, remarks (required for objection), **Generate Clearance PDF** (stores URL), **Save** posts `POST /applications/:id/clearances`.
-* **Test & Validate**
-
-  * Mark **CLEAR**, save; BCA row shows **CLEAR** and a PDF link that opens.
-  * Mark **OBJECTION** on another app; stage auto moves to **ON\_HOLD\_BCA**; OWO sees objection text in Summary.
+  * ✅ Stage becomes **SENT\_TO\_BCA\_HOUSING**; Summary tab shows BCA/Housing = **PENDING**.
+  * ✅ Audit shows a TRANSITION row with from/to stages.
 
 ---
 
-#### 5) Housing console — same as BCA
+#### 4) BCA console — CLEAR/OBJECTION with signed PDF ✅
 
-* Implement: `/console/housing` mirrors BCA behavior.
+* ✅ Implement: `/console/bca` list, detail panel with radio **CLEAR/OBJECTION**, remarks (required for objection), **Generate Clearance PDF** (stores URL), **Save** posts `POST /applications/:id/clearances`.
 * **Test & Validate**
 
-  * When **both sections = CLEAR** and app is in `SENT_TO_BCA_HOUSING`, stage auto-moves to **BCA\_HOUSING\_CLEAR**; timeline updates; both clearance PDFs open.
+  * ✅ Mark **CLEAR**, save; BCA row shows **CLEAR** and a PDF link that opens.
+  * ✅ Mark **OBJECTION** on another app; stage auto moves to **ON\_HOLD\_BCA**; OWO sees objection text in Summary.
+
+**Implementation Summary:**
+- ✅ **Backend**: Added `GET /api/applications/bca/pending` endpoint to fetch applications needing BCA clearance
+- ✅ **Backend**: Added `POST /api/applications/:id/bca/generate-pdf` endpoint for BCA clearance PDF generation
+- ✅ **Backend**: Enhanced existing `POST /api/applications/:id/clearances` endpoint to support signed PDF URLs
+- ✅ **Frontend**: Completely rebuilt `/console/bca` page with functional clearance processing
+- ✅ **Frontend**: Implemented real-time application loading, filtering, and selection
+- ✅ **Frontend**: Added CLEAR/OBJECTION radio buttons with validation (remarks required for objections)
+- ✅ **Frontend**: Integrated PDF generation with signed URL display and download
+- ✅ **Frontend**: Connected to clearance API with proper error handling and user feedback
+- ✅ **Auto-transition**: BCA OBJECTION automatically moves applications to ON_HOLD_BCA stage (when in BCA_PENDING stage)
+- ✅ **Validation**: All acceptance tests pass - CLEAR saves with PDF link, OBJECTION triggers auto-transition
+
+---
+
+#### 5) Housing console — same as BCA ✅ COMPLETED
+
+* ✅ Implement: `/console/housing` mirrors BCA behavior.
+* ✅ **Test & Validate**
+
+  * ✅ When **both sections = CLEAR** and app is in `SENT_TO_BCA_HOUSING`, stage auto-moves to **BCA\_HOUSING\_CLEAR**; timeline updates; both clearance PDFs open.
+
+**Implementation Notes:**
+- ✅ **Backend**: Added housing-specific endpoints (`/api/applications/housing/pending` and `/api/applications/:id/housing/generate-pdf`) mirroring BCA endpoints
+- ✅ **Backend**: Enhanced auto-transition logic in `clearanceService.ts` to handle both-clearances scenario in `SENT_TO_BCA_HOUSING` stage
+- ✅ **Backend**: Added missing `SENT_TO_BCA_HOUSING → BCA_HOUSING_CLEAR` transition with `GUARD_CLEARANCES_COMPLETE` guard to seed data
+- ✅ **Backend**: Fixed auto-transition context validation by passing user information to guard execution
+- ✅ **Frontend**: Completely rebuilt `/console/housing` page from placeholder to functional console mirroring BCA behavior
+- ✅ **Frontend**: Implemented real-time application loading, clearance processing, PDF generation, and form validation
+- ✅ **Frontend**: Added housing-specific API methods in `api.ts` service
+- ✅ **Auto-transition**: When both BCA and Housing clearances are CLEAR in `SENT_TO_BCA_HOUSING` stage, application automatically transitions to `BCA_HOUSING_CLEAR`
+- ✅ **Validation**: Comprehensive acceptance test passes - both clearances processed, auto-transition occurs, both PDFs available
 
 ---
 

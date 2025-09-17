@@ -51,23 +51,31 @@ export default function WorkflowActions({
 
       // For each transition, check if guard allows it
       for (const transition of transitions) {
-        if (transition.canTransition !== undefined) {
-          // Guard result already included from dry-run
+        if (transition.guardResult) {
+          // Guard result included from dry-run
+          actionButtons.push({
+            transition,
+            canTransition: transition.guardResult.canTransition,
+            reason: transition.guardResult.reason || 'No reason provided',
+            metadata: transition.guardResult.metadata
+          });
+        } else if (transition.canTransition !== undefined) {
+          // Legacy format - guard result already included directly
           actionButtons.push({
             transition,
             canTransition: transition.canTransition,
-            reason: transition.reason || '',
+            reason: transition.reason || 'No reason provided',
             metadata: transition.metadata
           });
         } else {
           // Test guard separately if not included
           const guardResponse = await apiService.testGuard(applicationId, transition.toStageId);
-          
+
           if (guardResponse.success && guardResponse.data) {
             actionButtons.push({
               transition,
               canTransition: guardResponse.data.guardResult.canTransition,
-              reason: guardResponse.data.guardResult.reason,
+              reason: guardResponse.data.guardResult.reason || 'No reason provided',
               metadata: guardResponse.data.guardResult.metadata
             });
           } else {
@@ -90,13 +98,16 @@ export default function WorkflowActions({
   };
 
   const handleTransition = async (action: ActionButton) => {
-    if (!action.canTransition || transitioning) return;
+    // Prevent any action if transition is not allowed or already transitioning
+    if (!action.canTransition || transitioning) {
+      return;
+    }
 
     setTransitioning(action.transition.id);
-    
+
     try {
       const response = await apiService.transitionApplication(
-        applicationId, 
+        applicationId,
         action.transition.toStageId,
         `Transitioned to ${action.transition.toStage.name}`
       );
@@ -106,7 +117,7 @@ export default function WorkflowActions({
         if (onTransition) {
           onTransition(action.transition);
         }
-        
+
         // Reload actions for new stage
         await loadAvailableActions();
       } else {
@@ -199,41 +210,61 @@ export default function WorkflowActions({
       <h3 className="text-lg font-medium text-gray-900 mb-4">Available Actions</h3>
       
       <div className="space-y-3">
-        {actions.map((action) => (
-          <div key={action.transition.id} className="flex items-start space-x-3">
-            <button
-              onClick={() => handleTransition(action)}
-              disabled={!action.canTransition || transitioning === action.transition.id}
-              className={`flex items-center px-4 py-2 rounded text-sm font-medium transition-colors ${getButtonStyle(action)} ${
-                transitioning === action.transition.id ? 'opacity-50' : ''
-              }`}
-              title={action.reason}
-            >
-              {transitioning === action.transition.id ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-              ) : (
-                <span className="mr-2">{getStatusIcon(action)}</span>
-              )}
-              {action.transition.toStage.name}
-            </button>
-            
-            <div className="flex-1 min-w-0">
-              <p className={`text-sm ${action.canTransition ? 'text-gray-600' : 'text-red-600'}`}>
-                {action.reason}
-              </p>
-              {action.metadata && Object.keys(action.metadata).length > 0 && (
-                <details className="mt-1">
-                  <summary className="text-xs text-gray-400 cursor-pointer hover:text-gray-600">
-                    Additional details
-                  </summary>
-                  <pre className="mt-1 text-xs text-gray-500 bg-gray-50 p-2 rounded overflow-x-auto">
-                    {JSON.stringify(action.metadata, null, 2)}
-                  </pre>
-                </details>
-              )}
+        {actions.map((action) => {
+          const isTransitioning = transitioning === action.transition.id;
+          const isDisabled = !action.canTransition || !!transitioning;
+
+          return (
+            <div key={action.transition.id} className="flex items-start space-x-3">
+              <div className="relative group">
+                <button
+                  onClick={() => handleTransition(action)}
+                  disabled={isDisabled}
+                  className={`flex items-center px-4 py-2 rounded text-sm font-medium transition-colors ${getButtonStyle(action)} ${
+                    isTransitioning ? 'opacity-50' : ''
+                  }`}
+                  title={action.canTransition ? `Click to ${action.transition.toStage.name}` : `Blocked: ${action.reason}`}
+                  aria-label={action.canTransition ? `Transition to ${action.transition.toStage.name}` : `Cannot transition: ${action.reason}`}
+                >
+                  {isTransitioning ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                  ) : (
+                    <span className="mr-2">{getStatusIcon(action)}</span>
+                  )}
+                  {action.transition.toStage.name}
+                </button>
+
+                {/* Enhanced tooltip for disabled buttons */}
+                {!action.canTransition && (
+                  <div className="absolute bottom-full left-0 mb-2 px-3 py-2 bg-red-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 whitespace-nowrap">
+                    <div className="font-medium">Action Blocked</div>
+                    <div>{action.reason}</div>
+                    <div className="absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-red-900"></div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <p className={`text-sm font-medium ${action.canTransition ? 'text-green-600' : 'text-red-600'}`}>
+                  {action.canTransition ? '✓ Ready' : '✗ Blocked'}
+                </p>
+                <p className={`text-sm ${action.canTransition ? 'text-gray-600' : 'text-red-600'}`}>
+                  {action.reason}
+                </p>
+                {action.metadata && Object.keys(action.metadata).length > 0 && (
+                  <details className="mt-1">
+                    <summary className="text-xs text-gray-400 cursor-pointer hover:text-gray-600">
+                      Additional details
+                    </summary>
+                    <pre className="mt-1 text-xs text-gray-500 bg-gray-50 p-2 rounded overflow-x-auto">
+                      {JSON.stringify(action.metadata, null, 2)}
+                    </pre>
+                  </details>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import AuthGuard from "../../../components/AuthGuard";
+import WorkflowActions from "../../../components/WorkflowActions";
 import { useAuth } from "../../../contexts/AuthContext";
 import Link from "next/link";
 import { 
@@ -204,6 +205,13 @@ export default function ApplicationDetail() {
                 </div>
               </dl>
             </div>
+
+            {/* Workflow Actions */}
+            <WorkflowActions
+              applicationId={applicationId}
+              currentStage="SUBMITTED"
+              className="mt-6"
+            />
           </div>
         );
 

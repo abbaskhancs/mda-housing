@@ -152,12 +152,14 @@ export const clearanceSchemas = {
   create: z.object({
     sectionId: z.string().cuid('Invalid section ID'),
     statusId: z.string().cuid('Invalid status ID'),
-    remarks: z.string().max(500, 'Remarks too long').optional()
+    remarks: z.string().max(500, 'Remarks too long').optional(),
+    signedPdfUrl: z.string().url('Invalid PDF URL').optional()
   }),
 
   update: z.object({
     statusId: z.string().cuid('Invalid status ID').optional(),
-    remarks: z.string().max(500, 'Remarks too long').optional()
+    remarks: z.string().max(500, 'Remarks too long').optional(),
+    signedPdfUrl: z.string().url('Invalid PDF URL').optional()
   }),
 
   getById: z.object({

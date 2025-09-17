@@ -234,24 +234,30 @@ export declare const clearanceSchemas: {
         sectionId: z.ZodString;
         statusId: z.ZodString;
         remarks: z.ZodOptional<z.ZodString>;
+        signedPdfUrl: z.ZodOptional<z.ZodString>;
     }, "strip", z.ZodTypeAny, {
         sectionId: string;
         statusId: string;
         remarks?: string | undefined;
+        signedPdfUrl?: string | undefined;
     }, {
         sectionId: string;
         statusId: string;
         remarks?: string | undefined;
+        signedPdfUrl?: string | undefined;
     }>;
     update: z.ZodObject<{
         statusId: z.ZodOptional<z.ZodString>;
         remarks: z.ZodOptional<z.ZodString>;
+        signedPdfUrl: z.ZodOptional<z.ZodString>;
     }, "strip", z.ZodTypeAny, {
         remarks?: string | undefined;
         statusId?: string | undefined;
+        signedPdfUrl?: string | undefined;
     }, {
         remarks?: string | undefined;
         statusId?: string | undefined;
+        signedPdfUrl?: string | undefined;
     }>;
     getById: z.ZodObject<{
         id: z.ZodString;

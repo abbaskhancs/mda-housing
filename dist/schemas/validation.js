@@ -134,11 +134,13 @@ exports.clearanceSchemas = {
     create: zod_1.z.object({
         sectionId: zod_1.z.string().cuid('Invalid section ID'),
         statusId: zod_1.z.string().cuid('Invalid status ID'),
-        remarks: zod_1.z.string().max(500, 'Remarks too long').optional()
+        remarks: zod_1.z.string().max(500, 'Remarks too long').optional(),
+        signedPdfUrl: zod_1.z.string().url('Invalid PDF URL').optional()
     }),
     update: zod_1.z.object({
         statusId: zod_1.z.string().cuid('Invalid status ID').optional(),
-        remarks: zod_1.z.string().max(500, 'Remarks too long').optional()
+        remarks: zod_1.z.string().max(500, 'Remarks too long').optional(),
+        signedPdfUrl: zod_1.z.string().url('Invalid PDF URL').optional()
     }),
     getById: zod_1.z.object({
         id: zod_1.z.string().cuid('Invalid clearance ID')

@@ -1,8 +1,42 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const client_1 = require("@prisma/client");
 const auth_1 = require("../middleware/auth");
+const rbac_1 = require("../middleware/rbac");
 const validation_1 = require("../middleware/validation");
 const validation_2 = require("../schemas/validation");
 const errorHandler_1 = require("../middleware/errorHandler");
@@ -1113,6 +1147,101 @@ router.get('/:id/transfer-deed', auth_1.authenticateToken, (0, validation_1.vali
     const transferDeed = await (0, deedService_1.getTransferDeed)(id);
     res.json({
         transferDeed
+    });
+}));
+/**
+ * GET /api/applications/bca/pending
+ * Get applications that need BCA clearance
+ */
+router.get('/bca/pending', auth_1.authenticateToken, (0, rbac_1.requireRole)('BCA', 'ADMIN'), (0, errorHandler_1.asyncHandler)(async (req, res) => {
+    // Get applications that are in SENT_TO_BCA_HOUSING stage or have pending BCA clearances
+    const applications = await prisma.application.findMany({
+        where: {
+            OR: [
+                {
+                    currentStage: {
+                        code: 'SENT_TO_BCA_HOUSING'
+                    }
+                },
+                {
+                    currentStage: {
+                        code: 'BCA_PENDING'
+                    }
+                },
+                {
+                    clearances: {
+                        some: {
+                            section: {
+                                code: 'BCA'
+                            },
+                            status: {
+                                code: 'PENDING'
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        include: {
+            seller: true,
+            buyer: true,
+            attorney: true,
+            plot: true,
+            currentStage: true,
+            clearances: {
+                where: {
+                    section: {
+                        code: 'BCA'
+                    }
+                },
+                include: {
+                    section: true,
+                    status: true
+                }
+            }
+        },
+        orderBy: { createdAt: 'asc' }
+    });
+    res.json({
+        applications
+    });
+}));
+/**
+ * POST /api/applications/:id/bca/generate-pdf
+ * Generate BCA clearance PDF
+ */
+router.post('/:id/bca/generate-pdf', auth_1.authenticateToken, (0, rbac_1.requireRole)('BCA', 'ADMIN'), (0, validation_1.validateParams)(validation_2.commonSchemas.idParam), (0, errorHandler_1.asyncHandler)(async (req, res) => {
+    const { id } = req.params;
+    // Check if application exists
+    const application = await prisma.application.findUnique({
+        where: { id },
+        include: {
+            seller: true,
+            buyer: true,
+            attorney: true,
+            plot: true,
+            currentStage: true
+        }
+    });
+    if (!application) {
+        throw (0, errorHandler_1.createError)('Application not found', 404, 'APPLICATION_NOT_FOUND');
+    }
+    // Generate BCA clearance PDF using document service
+    const { DocumentService } = await Promise.resolve().then(() => __importStar(require('../services/documentService')));
+    const documentService = new DocumentService();
+    const result = await documentService.generateDocument({
+        applicationId: application.id,
+        documentType: 'BCA_CLEARANCE',
+        templateData: {
+            application,
+            sectionName: 'BCA'
+        }
+    });
+    logger_1.logger.info(`BCA clearance PDF generated for application ${id} by user ${req.user.username}`);
+    res.json({
+        message: 'BCA clearance PDF generated successfully',
+        signedUrl: result.downloadUrl,
+        documentId: result.id
     });
 }));
 exports.default = router;

@@ -65,6 +65,10 @@ export declare const GUARD_APPROVAL_COMPLETE: GuardFunction;
  */
 export declare const GUARD_APPROVAL_REJECTED: GuardFunction;
 /**
+ * GUARD_SENT_TO_BCA_HOUSING: Create pending clearances for BCA and Housing when transitioning to SENT_TO_BCA_HOUSING
+ */
+export declare const GUARD_SENT_TO_BCA_HOUSING: GuardFunction;
+/**
  * GUARD_DEED_FINALIZED: Check if transfer deed has been finalized
  */
 export declare const GUARD_DEED_FINALIZED: GuardFunction;

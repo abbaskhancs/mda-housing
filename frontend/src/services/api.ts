@@ -12,6 +12,12 @@ export interface ApiResponse<T = any> {
   message?: string;
 }
 
+export interface GuardResult {
+  canTransition: boolean;
+  reason: string;
+  metadata?: any;
+}
+
 export interface WorkflowTransition {
   id: string;
   fromStageId: string;
@@ -27,6 +33,7 @@ export interface WorkflowTransition {
     code: string;
     name: string;
   };
+  guardResult?: GuardResult;
   canTransition?: boolean;
   reason?: string;
   metadata?: any;
@@ -221,12 +228,31 @@ class ApiService {
   }
 
   // Clearance methods
-  async createClearance(applicationId: string, section: string, status: string, remarks?: string): Promise<ApiResponse<any>> {
+  async createClearance(applicationId: string, sectionId: string, statusId: string, remarks?: string, signedPdfUrl?: string): Promise<ApiResponse<any>> {
     return this.post(`/api/applications/${applicationId}/clearances`, {
-      section,
-      status,
-      remarks
+      sectionId,
+      statusId,
+      remarks,
+      signedPdfUrl
     });
+  }
+
+  // BCA Console methods
+  async getBCAPendingApplications(): Promise<ApiResponse<{ applications: Application[] }>> {
+    return this.get<{ applications: Application[] }>('/api/applications/bca/pending');
+  }
+
+  async generateBCAClearancePDF(applicationId: string): Promise<ApiResponse<{ signedUrl: string; documentId: string }>> {
+    return this.post(`/api/applications/${applicationId}/bca/generate-pdf`, {});
+  }
+
+  // Housing Console methods
+  async getHousingPendingApplications(): Promise<ApiResponse<{ applications: Application[] }>> {
+    return this.get<{ applications: Application[] }>('/api/applications/housing/pending');
+  }
+
+  async generateHousingClearancePDF(applicationId: string): Promise<ApiResponse<{ signedUrl: string; documentId: string }>> {
+    return this.post(`/api/applications/${applicationId}/housing/generate-pdf`, {});
   }
 
   // Accounts methods

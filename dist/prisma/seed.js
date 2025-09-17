@@ -97,17 +97,18 @@ async function main() {
     const stages = [
         { code: 'SUBMITTED', name: 'Submitted', sortOrder: 1 },
         { code: 'UNDER_SCRUTINY', name: 'Under Scrutiny', sortOrder: 2 },
-        { code: 'BCA_PENDING', name: 'BCA Pending', sortOrder: 3 },
-        { code: 'HOUSING_PENDING', name: 'Housing Pending', sortOrder: 4 },
-        { code: 'BCA_HOUSING_CLEAR', name: 'BCA & Housing Clear', sortOrder: 5 },
-        { code: 'ON_HOLD_BCA', name: 'On Hold - BCA', sortOrder: 6 },
-        { code: 'ON_HOLD_HOUSING', name: 'On Hold - Housing', sortOrder: 7 },
-        { code: 'ACCOUNTS_PENDING', name: 'Accounts Pending', sortOrder: 8 },
-        { code: 'PAYMENT_PENDING', name: 'Payment Pending', sortOrder: 9 },
-        { code: 'READY_FOR_APPROVAL', name: 'Ready for Approval', sortOrder: 10 },
-        { code: 'APPROVED', name: 'Approved', sortOrder: 11 },
-        { code: 'REJECTED', name: 'Rejected', sortOrder: 12 },
-        { code: 'COMPLETED', name: 'Completed', sortOrder: 13 },
+        { code: 'SENT_TO_BCA_HOUSING', name: 'Sent to BCA & Housing', sortOrder: 3 },
+        { code: 'BCA_PENDING', name: 'BCA Pending', sortOrder: 4 },
+        { code: 'HOUSING_PENDING', name: 'Housing Pending', sortOrder: 5 },
+        { code: 'BCA_HOUSING_CLEAR', name: 'BCA & Housing Clear', sortOrder: 6 },
+        { code: 'ON_HOLD_BCA', name: 'On Hold - BCA', sortOrder: 7 },
+        { code: 'ON_HOLD_HOUSING', name: 'On Hold - Housing', sortOrder: 8 },
+        { code: 'ACCOUNTS_PENDING', name: 'Accounts Pending', sortOrder: 9 },
+        { code: 'PAYMENT_PENDING', name: 'Payment Pending', sortOrder: 10 },
+        { code: 'READY_FOR_APPROVAL', name: 'Ready for Approval', sortOrder: 11 },
+        { code: 'APPROVED', name: 'Approved', sortOrder: 12 },
+        { code: 'REJECTED', name: 'Rejected', sortOrder: 13 },
+        { code: 'COMPLETED', name: 'Completed', sortOrder: 14 },
     ];
     for (const stage of stages) {
         await prisma.wfStage.upsert({
@@ -122,8 +123,9 @@ async function main() {
     const stageMap = new Map(allStages.map(stage => [stage.code, stage.id]));
     const transitions = [
         { from: 'SUBMITTED', to: 'UNDER_SCRUTINY', guard: 'GUARD_INTAKE_COMPLETE' },
-        { from: 'UNDER_SCRUTINY', to: 'BCA_PENDING', guard: 'GUARD_SCRUTINY_COMPLETE' },
-        { from: 'UNDER_SCRUTINY', to: 'HOUSING_PENDING', guard: 'GUARD_SCRUTINY_COMPLETE' },
+        { from: 'UNDER_SCRUTINY', to: 'SENT_TO_BCA_HOUSING', guard: 'GUARD_SCRUTINY_COMPLETE' },
+        { from: 'SENT_TO_BCA_HOUSING', to: 'BCA_PENDING', guard: 'GUARD_SENT_TO_BCA_HOUSING' },
+        { from: 'SENT_TO_BCA_HOUSING', to: 'HOUSING_PENDING', guard: 'GUARD_SENT_TO_BCA_HOUSING' },
         { from: 'BCA_PENDING', to: 'BCA_HOUSING_CLEAR', guard: 'GUARD_BCA_CLEAR' },
         { from: 'BCA_PENDING', to: 'ON_HOLD_BCA', guard: 'GUARD_BCA_OBJECTION' },
         { from: 'HOUSING_PENDING', to: 'BCA_HOUSING_CLEAR', guard: 'GUARD_HOUSING_CLEAR' },

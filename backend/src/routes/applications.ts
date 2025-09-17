@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth';
+import { requireRole } from '../middleware/rbac';
 import { validate, validateParams } from '../middleware/validation';
 import { applicationSchemas, commonSchemas, clearanceSchemas, accountsSchemas, reviewSchemas, transferDeedSchemas } from '../schemas/validation';
 import { asyncHandler, createError } from '../middleware/errorHandler';
@@ -685,7 +686,8 @@ router.post('/:id/clearances', authenticateToken, validateParams(commonSchemas.i
     statusId,
     remarks || null,
     req.user!.id,
-    signedPdfUrl
+    signedPdfUrl,
+    req.user!.role
   );
 
   // Update audit log with IP and user agent
@@ -1338,6 +1340,214 @@ router.get('/:id/transfer-deed', authenticateToken, validateParams(commonSchemas
 
   res.json({
     transferDeed
+  });
+}));
+
+/**
+ * GET /api/applications/bca/pending
+ * Get applications that need BCA clearance
+ */
+router.get('/bca/pending', authenticateToken, requireRole('BCA', 'ADMIN'), asyncHandler(async (req: Request, res: Response) => {
+  // Get applications that are in SENT_TO_BCA_HOUSING stage or have pending BCA clearances
+  const applications = await prisma.application.findMany({
+    where: {
+      OR: [
+        {
+          currentStage: {
+            code: 'SENT_TO_BCA_HOUSING'
+          }
+        },
+        {
+          currentStage: {
+            code: 'BCA_PENDING'
+          }
+        },
+        {
+          clearances: {
+            some: {
+              section: {
+                code: 'BCA'
+              },
+              status: {
+                code: 'PENDING'
+              }
+            }
+          }
+        }
+      ]
+    },
+    include: {
+      seller: true,
+      buyer: true,
+      attorney: true,
+      plot: true,
+      currentStage: true,
+      clearances: {
+        where: {
+          section: {
+            code: 'BCA'
+          }
+        },
+        include: {
+          section: true,
+          status: true
+        }
+      }
+    },
+    orderBy: { createdAt: 'asc' }
+  });
+
+  res.json({
+    applications
+  });
+}));
+
+/**
+ * POST /api/applications/:id/bca/generate-pdf
+ * Generate BCA clearance PDF
+ */
+router.post('/:id/bca/generate-pdf', authenticateToken, requireRole('BCA', 'ADMIN'), validateParams(commonSchemas.idParam), asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  // Check if application exists
+  const application = await prisma.application.findUnique({
+    where: { id },
+    include: {
+      seller: true,
+      buyer: true,
+      attorney: true,
+      plot: true,
+      currentStage: true
+    }
+  });
+
+  if (!application) {
+    throw createError('Application not found', 404, 'APPLICATION_NOT_FOUND');
+  }
+
+  // Generate BCA clearance PDF using document service
+  const { DocumentService } = await import('../services/documentService');
+  const documentService = new DocumentService();
+
+  const result = await documentService.generateDocument({
+    applicationId: application.id,
+    documentType: 'BCA_CLEARANCE',
+    templateData: {
+      application,
+      sectionName: 'BCA'
+    }
+  });
+
+  logger.info(`BCA clearance PDF generated for application ${id} by user ${req.user!.username}`);
+
+  res.json({
+    message: 'BCA clearance PDF generated successfully',
+    signedUrl: result.downloadUrl,
+    documentId: result.id
+  });
+}));
+
+/**
+ * GET /api/applications/housing/pending
+ * Get applications that need Housing clearance
+ */
+router.get('/housing/pending', authenticateToken, requireRole('HOUSING', 'ADMIN'), asyncHandler(async (req: Request, res: Response) => {
+  // Get applications that are in SENT_TO_BCA_HOUSING stage or have pending Housing clearances
+  const applications = await prisma.application.findMany({
+    where: {
+      OR: [
+        {
+          currentStage: {
+            code: 'SENT_TO_BCA_HOUSING'
+          }
+        },
+        {
+          currentStage: {
+            code: 'HOUSING_PENDING'
+          }
+        },
+        {
+          clearances: {
+            some: {
+              section: {
+                code: 'HOUSING'
+              },
+              status: {
+                code: 'PENDING'
+              }
+            }
+          }
+        }
+      ]
+    },
+    include: {
+      seller: true,
+      buyer: true,
+      attorney: true,
+      plot: true,
+      currentStage: true,
+      clearances: {
+        where: {
+          section: {
+            code: 'HOUSING'
+          }
+        },
+        include: {
+          section: true,
+          status: true
+        }
+      }
+    },
+    orderBy: { createdAt: 'asc' }
+  });
+
+  res.json({
+    applications
+  });
+}));
+
+/**
+ * POST /api/applications/:id/housing/generate-pdf
+ * Generate Housing clearance PDF
+ */
+router.post('/:id/housing/generate-pdf', authenticateToken, requireRole('HOUSING', 'ADMIN'), validateParams(commonSchemas.idParam), asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  // Check if application exists
+  const application = await prisma.application.findUnique({
+    where: { id },
+    include: {
+      seller: true,
+      buyer: true,
+      attorney: true,
+      plot: true,
+      currentStage: true
+    }
+  });
+
+  if (!application) {
+    throw createError('Application not found', 404, 'APPLICATION_NOT_FOUND');
+  }
+
+  // Generate Housing clearance PDF using document service
+  const { DocumentService } = await import('../services/documentService');
+  const documentService = new DocumentService();
+
+  const result = await documentService.generateDocument({
+    applicationId: application.id,
+    documentType: 'HOUSING_CLEARANCE',
+    templateData: {
+      application,
+      sectionName: 'HOUSING'
+    }
+  });
+
+  logger.info(`Housing clearance PDF generated for application ${id} by user ${req.user!.username}`);
+
+  res.json({
+    message: 'Housing clearance PDF generated successfully',
+    signedUrl: result.downloadUrl,
+    documentId: result.id
   });
 }));
 
