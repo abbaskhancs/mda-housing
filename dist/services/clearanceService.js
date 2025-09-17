@@ -5,7 +5,7 @@ const client_1 = require("@prisma/client");
 const logger_1 = require("../config/logger");
 const workflowGuards_1 = require("../guards/workflowGuards");
 const prisma = new client_1.PrismaClient();
-const createClearance = async (applicationId, sectionId, statusId, remarks, userId, signedPdfUrl) => {
+const createClearance = async (applicationId, sectionId, statusId, remarks, userId, signedPdfUrl, userRole) => {
     try {
         // Use transaction to ensure atomicity
         const result = await prisma.$transaction(async (tx) => {
@@ -92,7 +92,8 @@ const createClearance = async (applicationId, sectionId, statusId, remarks, user
             };
         });
         // Check for auto-progress after clearance creation
-        const autoTransition = await checkAutoProgress(applicationId, result.application.currentStageId, result.section.code, result.status.code);
+        const autoTransition = await checkAutoProgress(applicationId, result.application.currentStageId, result.section.code, result.status.code, userId, userRole || 'ADMIN' // Default to ADMIN if not provided
+        );
         return {
             clearance: result.clearance,
             autoTransition
@@ -104,7 +105,7 @@ const createClearance = async (applicationId, sectionId, statusId, remarks, user
     }
 };
 exports.createClearance = createClearance;
-const checkAutoProgress = async (applicationId, currentStageId, sectionCode, statusCode) => {
+const checkAutoProgress = async (applicationId, currentStageId, sectionCode, statusCode, userId, userRole) => {
     try {
         // Get current stage
         const currentStage = await prisma.wfStage.findUnique({
@@ -122,12 +123,22 @@ const checkAutoProgress = async (applicationId, currentStageId, sectionCode, sta
                 nextStageCode = 'BCA_HOUSING_CLEAR';
                 guardName = 'GUARD_BCA_CLEAR';
             }
+            else if (currentStage.code === 'SENT_TO_BCA_HOUSING') {
+                // Check if both BCA and Housing are now clear
+                nextStageCode = 'BCA_HOUSING_CLEAR';
+                guardName = 'GUARD_CLEARANCES_COMPLETE';
+            }
         }
         else if (sectionCode === 'HOUSING' && statusCode === 'CLEAR') {
             // Housing cleared - check if we should move to BCA_HOUSING_CLEAR
             if (currentStage.code === 'HOUSING_PENDING') {
                 nextStageCode = 'BCA_HOUSING_CLEAR';
                 guardName = 'GUARD_HOUSING_CLEAR';
+            }
+            else if (currentStage.code === 'SENT_TO_BCA_HOUSING') {
+                // Check if both BCA and Housing are now clear
+                nextStageCode = 'BCA_HOUSING_CLEAR';
+                guardName = 'GUARD_CLEARANCES_COMPLETE';
             }
         }
         else if (sectionCode === 'BCA' && statusCode === 'OBJECTION') {
@@ -157,8 +168,8 @@ const checkAutoProgress = async (applicationId, currentStageId, sectionCode, sta
         // Execute guard to validate transition
         const guardContext = {
             applicationId,
-            userId: '', // Will be set by the endpoint
-            userRole: '', // Will be set by the endpoint
+            userId,
+            userRole,
             fromStageId: currentStageId,
             toStageId: nextStage.id,
             additionalData: {}
@@ -188,7 +199,7 @@ const checkAutoProgress = async (applicationId, currentStageId, sectionCode, sta
         await prisma.auditLog.create({
             data: {
                 applicationId,
-                userId: '', // Will be set by the endpoint
+                userId,
                 action: 'AUTO_STAGE_TRANSITION',
                 fromStageId: currentStageId,
                 toStageId: nextStage.id,

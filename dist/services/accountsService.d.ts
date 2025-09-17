@@ -8,8 +8,23 @@ export interface AccountsResult {
     };
     clearanceCreated?: any;
 }
-export declare const upsertAccountsBreakdown: (applicationId: string, totalAmount: number, challanUrl: string | null, userId: string) => Promise<AccountsResult>;
+export interface FeeHeads {
+    arrears: number;
+    surcharge: number;
+    nonUser: number;
+    transferFee: number;
+    attorneyFee: number;
+    water: number;
+    suiGas: number;
+    additional: number;
+}
+export declare const upsertAccountsBreakdown: (applicationId: string, feeHeads: FeeHeads, challanNo?: string, challanDate?: Date, userId?: string) => Promise<AccountsResult>;
 export declare const verifyPayment: (applicationId: string, paidAmount: number, challanUrl: string | null, userId: string) => Promise<AccountsResult>;
+export declare const generateChallan: (applicationId: string, userId: string) => Promise<{
+    accountsBreakdown: any;
+    challanNo: string;
+    challanDate: Date;
+}>;
 export declare const getAccountsBreakdown: (applicationId: string) => Promise<({
     application: {
         seller: {
@@ -70,11 +85,26 @@ export declare const getAccountsBreakdown: (applicationId: string) => Promise<({
     id: string;
     createdAt: Date;
     updatedAt: Date;
-    totalAmount: import("@prisma/client/runtime/library").Decimal;
-    challanUrl: string | null;
+    arrears: import("@prisma/client/runtime/library").Decimal;
+    surcharge: import("@prisma/client/runtime/library").Decimal;
+    nonUser: import("@prisma/client/runtime/library").Decimal;
+    transferFee: import("@prisma/client/runtime/library").Decimal;
+    attorneyFee: import("@prisma/client/runtime/library").Decimal;
+    water: import("@prisma/client/runtime/library").Decimal;
+    suiGas: import("@prisma/client/runtime/library").Decimal;
+    additional: import("@prisma/client/runtime/library").Decimal;
     paidAmount: import("@prisma/client/runtime/library").Decimal;
+    challanUrl: string | null;
     applicationId: string;
+    totalAmount: import("@prisma/client/runtime/library").Decimal;
+    totalAmountWords: string | null;
     remainingAmount: import("@prisma/client/runtime/library").Decimal;
+    challanNo: string | null;
+    challanDate: Date | null;
     paymentVerified: boolean;
     verifiedAt: Date | null;
+    accountsStatus: string | null;
+    objectionReason: string | null;
+    objectionDate: Date | null;
+    resolvedDate: Date | null;
 }) | null>;

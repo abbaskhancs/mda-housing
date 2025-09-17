@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { z } from 'zod';
 import { authenticateToken } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
 import { validate, validateParams } from '../middleware/validation';
@@ -7,13 +8,15 @@ import { applicationSchemas, commonSchemas, clearanceSchemas, accountsSchemas, r
 import { asyncHandler, createError } from '../middleware/errorHandler';
 import { logger } from '../config/logger';
 import { executeGuard, validateGuardContext } from '../guards/workflowGuards';
+import { executeWorkflowTransition } from '../services/workflowService';
 import { uploadMultiple } from '../middleware/upload';
 import { uploadFile } from '../config/storage';
 import { generateIntakeReceipt, createReceiptRecord } from '../services/receiptService';
 import { createClearance, getClearancesByApplication, getClearanceById } from '../services/clearanceService';
-import { upsertAccountsBreakdown, verifyPayment, getAccountsBreakdown } from '../services/accountsService';
+import { upsertAccountsBreakdown, verifyPayment, getAccountsBreakdown, generateChallan, FeeHeads } from '../services/accountsService';
 import { createReview, updateReview, getReviewsByApplication, getReviewById, getReviewsBySection } from '../services/reviewService';
 import { createDeedDraft, finalizeDeed, getTransferDeed, updateDeedDraft } from '../services/deedService';
+import { PDFService } from '../services/pdfService';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -784,11 +787,11 @@ router.get('/:id/clearances/:clearanceId', authenticateToken, validateParams(com
 
 /**
  * POST /api/applications/:id/accounts
- * Upsert accounts breakdown for application
+ * Update accounts breakdown with fee heads for application
  */
 router.post('/:id/accounts', authenticateToken, validateParams(commonSchemas.idParam), validate(accountsSchemas.create), asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { totalAmount, challanUrl } = req.body;
+  const { arrears, surcharge, nonUser, transferFee, attorneyFee, water, suiGas, additional } = req.body;
 
   // Check if application exists
   const application = await prisma.application.findUnique({
@@ -799,11 +802,23 @@ router.post('/:id/accounts', authenticateToken, validateParams(commonSchemas.idP
     throw createError('Application not found', 404, 'APPLICATION_NOT_FOUND');
   }
 
+  const feeHeads: FeeHeads = {
+    arrears: Number(arrears) || 0,
+    surcharge: Number(surcharge) || 0,
+    nonUser: Number(nonUser) || 0,
+    transferFee: Number(transferFee) || 0,
+    attorneyFee: Number(attorneyFee) || 0,
+    water: Number(water) || 0,
+    suiGas: Number(suiGas) || 0,
+    additional: Number(additional) || 0
+  };
+
   // Upsert accounts breakdown
   const result = await upsertAccountsBreakdown(
     id,
-    totalAmount,
-    challanUrl || null,
+    feeHeads,
+    undefined, // challanNo - will be generated separately
+    undefined, // challanDate - will be generated separately
     req.user!.id
   );
 
@@ -812,7 +827,7 @@ router.post('/:id/accounts', authenticateToken, validateParams(commonSchemas.idP
     where: {
       applicationId: id,
       userId: req.user!.id,
-      action: 'ACCOUNTS_UPSERTED'
+      action: 'ACCOUNTS_UPDATE'
     },
     data: {
       ipAddress: req.ip,
@@ -835,10 +850,10 @@ router.post('/:id/accounts', authenticateToken, validateParams(commonSchemas.idP
     });
   }
 
-  logger.info(`Accounts breakdown upserted for application ${id} by user ${req.user!.username}. Auto-transition: ${result.autoTransition ? 'Yes' : 'No'}`);
+  logger.info(`Accounts breakdown updated for application ${id} by user ${req.user!.username}. Auto-transition: ${result.autoTransition ? 'Yes' : 'No'}`);
 
   res.status(201).json({
-    message: 'Accounts breakdown upserted successfully',
+    message: 'Accounts breakdown updated successfully',
     accountsBreakdown: result.accountsBreakdown,
     autoTransition: result.autoTransition
   });
@@ -943,6 +958,97 @@ router.get('/:id/accounts', authenticateToken, validateParams(commonSchemas.idPa
   res.json({
     accountsBreakdown
   });
+}));
+
+/**
+ * POST /api/applications/:id/accounts/generate-challan
+ * Generate challan for application
+ */
+router.post('/:id/accounts/generate-challan', authenticateToken, validateParams(commonSchemas.idParam), validate(accountsSchemas.generateChallan), asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  // Check if application exists
+  const application = await prisma.application.findUnique({
+    where: { id }
+  });
+
+  if (!application) {
+    throw createError('Application not found', 404, 'APPLICATION_NOT_FOUND');
+  }
+
+  // Generate challan
+  const result = await generateChallan(id, req.user!.id);
+
+  // Update audit log with IP and user agent
+  await prisma.auditLog.updateMany({
+    where: {
+      applicationId: id,
+      userId: req.user!.id,
+      action: 'CHALLAN_GENERATED'
+    },
+    data: {
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent')
+    }
+  });
+
+  logger.info(`Challan generated for application ${id} by user ${req.user!.username}: ${result.challanNo}`);
+
+  res.status(201).json({
+    message: 'Challan generated successfully',
+    accountsBreakdown: result.accountsBreakdown,
+    challanNo: result.challanNo,
+    challanDate: result.challanDate
+  });
+}));
+
+/**
+ * GET /api/applications/:id/accounts/challan-pdf
+ * Generate and download challan PDF
+ */
+router.get('/:id/accounts/challan-pdf', authenticateToken, validateParams(commonSchemas.idParam), asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  // Check if application exists
+  const application = await prisma.application.findUnique({
+    where: { id }
+  });
+
+  if (!application) {
+    throw createError('Application not found', 404, 'APPLICATION_NOT_FOUND');
+  }
+
+  // Get accounts breakdown
+  const accountsBreakdown = await getAccountsBreakdown(id);
+
+  if (!accountsBreakdown) {
+    throw createError('Accounts breakdown not found', 404, 'ACCOUNTS_BREAKDOWN_NOT_FOUND');
+  }
+
+  if (!accountsBreakdown.challanNo) {
+    throw createError('Challan not generated yet', 400, 'CHALLAN_NOT_GENERATED');
+  }
+
+  // Generate PDF
+  const pdfService = new PDFService();
+  await pdfService.initialize();
+
+  const pdfBuffer = await pdfService.generateChallan({
+    application: accountsBreakdown.application,
+    accountsBreakdown,
+    plot: accountsBreakdown.application.plot,
+    seller: accountsBreakdown.application.seller,
+    buyer: accountsBreakdown.application.buyer
+  });
+
+  // Set response headers for PDF download
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="challan-${accountsBreakdown.challanNo}.pdf"`);
+  res.setHeader('Content-Length', pdfBuffer.length);
+
+  logger.info(`Challan PDF generated for application ${id} by user ${req.user!.username}`);
+
+  res.send(pdfBuffer);
 }));
 
 /**
@@ -1507,6 +1613,51 @@ router.get('/housing/pending', authenticateToken, requireRole('HOUSING', 'ADMIN'
 }));
 
 /**
+ * GET /api/applications/owo/bca-housing-review
+ * Get applications that need OWO review for BCA/Housing clearances
+ */
+router.get('/owo/bca-housing-review', authenticateToken, requireRole('OWO', 'ADMIN'), asyncHandler(async (req: Request, res: Response) => {
+  // Get applications that are in BCA_HOUSING_CLEAR stage and ready for OWO review
+  const applications = await prisma.application.findMany({
+    where: {
+      currentStage: {
+        code: 'BCA_HOUSING_CLEAR'
+      }
+    },
+    include: {
+      seller: true,
+      buyer: true,
+      attorney: true,
+      plot: true,
+      currentStage: true,
+      clearances: {
+        where: {
+          section: {
+            code: {
+              in: ['BCA', 'HOUSING']
+            }
+          }
+        },
+        include: {
+          section: true,
+          status: true
+        }
+      },
+      reviews: {
+        include: {
+          section: true
+        }
+      }
+    },
+    orderBy: { createdAt: 'desc' }
+  });
+
+  res.json({
+    applications
+  });
+}));
+
+/**
  * POST /api/applications/:id/housing/generate-pdf
  * Generate Housing clearance PDF
  */
@@ -1548,6 +1699,160 @@ router.post('/:id/housing/generate-pdf', authenticateToken, requireRole('HOUSING
     message: 'Housing clearance PDF generated successfully',
     signedUrl: result.downloadUrl,
     documentId: result.id
+  });
+}));
+
+/**
+ * POST /api/applications/:id/accounts/generate-pdf
+ * Generate Accounts clearance PDF
+ */
+router.post('/:id/accounts/generate-pdf', authenticateToken, requireRole('ACCOUNTS', 'ADMIN'), validateParams(commonSchemas.idParam), asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  // Check if application exists
+  const application = await prisma.application.findUnique({
+    where: { id },
+    include: {
+      seller: true,
+      buyer: true,
+      attorney: true,
+      plot: true,
+      currentStage: true,
+      clearances: {
+        include: {
+          section: true,
+          status: true
+        }
+      }
+    }
+  });
+
+  if (!application) {
+    throw createError('Application not found', 404, 'APPLICATION_NOT_FOUND');
+  }
+
+  // Check if accounts clearance exists and is CLEAR
+  const accountsClearance = application.clearances.find(
+    clearance => clearance.section.code === 'ACCOUNTS' && clearance.status.code === 'CLEAR'
+  );
+
+  if (!accountsClearance) {
+    throw createError('Accounts clearance not found or not cleared', 400, 'ACCOUNTS_CLEARANCE_NOT_FOUND');
+  }
+
+  // Generate Accounts clearance PDF using document service
+  const { DocumentService } = await import('../services/documentService');
+  const documentService = new DocumentService();
+
+  const result = await documentService.generateDocument({
+    applicationId: application.id,
+    documentType: 'ACCOUNTS_CLEARANCE',
+    templateData: {
+      application,
+      sectionName: 'ACCOUNTS',
+      clearance: accountsClearance
+    }
+  });
+
+  logger.info(`Accounts clearance PDF generated for application ${id} by user ${req.user!.username}`);
+
+  res.json({
+    message: 'Accounts clearance PDF generated successfully',
+    signedUrl: result.downloadUrl,
+    documentId: result.id
+  });
+}));
+
+/**
+ * POST /api/applications/:id/accounts/set-pending-payment
+ * Set accounts status to pending payment
+ */
+router.post('/:id/accounts/set-pending-payment', authenticateToken, validateParams(commonSchemas.idParam), asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  // Check if application exists and is in ACCOUNTS_PENDING stage
+  const application = await prisma.application.findUnique({
+    where: { id },
+    include: {
+      currentStage: true,
+      accountsBreakdown: true
+    }
+  });
+
+  if (!application) {
+    throw createError('Application not found', 404, 'APPLICATION_NOT_FOUND');
+  }
+
+  if (application.currentStage.code !== 'ACCOUNTS_PENDING') {
+    throw createError('Application must be in Accounts Pending stage', 400, 'INVALID_STAGE');
+  }
+
+  // Execute workflow transition
+  const transitionResult = await executeWorkflowTransition(
+    id,
+    'AWAITING_PAYMENT',
+    req.user!.id,
+    req.user!.role,
+    {}
+  );
+
+  if (!transitionResult.success) {
+    throw createError(transitionResult.error || 'Failed to set pending payment', 400, 'TRANSITION_FAILED');
+  }
+
+  res.json({
+    success: true,
+    message: 'Accounts status set to pending payment',
+    application: transitionResult.application,
+    accountsBreakdown: transitionResult.application?.accountsBreakdown
+  });
+}));
+
+/**
+ * POST /api/applications/:id/accounts/raise-objection
+ * Raise objection and set accounts status to on hold
+ */
+router.post('/:id/accounts/raise-objection', authenticateToken, validateParams(commonSchemas.idParam), validate(z.object({
+  objectionReason: z.string().min(1, 'Objection reason is required').max(500, 'Objection reason too long')
+})), asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { objectionReason } = req.body;
+
+  // Check if application exists and is in ACCOUNTS_PENDING stage
+  const application = await prisma.application.findUnique({
+    where: { id },
+    include: {
+      currentStage: true,
+      accountsBreakdown: true
+    }
+  });
+
+  if (!application) {
+    throw createError('Application not found', 404, 'APPLICATION_NOT_FOUND');
+  }
+
+  if (application.currentStage.code !== 'ACCOUNTS_PENDING') {
+    throw createError('Application must be in Accounts Pending stage', 400, 'INVALID_STAGE');
+  }
+
+  // Execute workflow transition with objection reason
+  const transitionResult = await executeWorkflowTransition(
+    id,
+    'ON_HOLD_ACCOUNTS',
+    req.user!.id,
+    req.user!.role,
+    { objectionReason }
+  );
+
+  if (!transitionResult.success) {
+    throw createError(transitionResult.error || 'Failed to raise objection', 400, 'TRANSITION_FAILED');
+  }
+
+  res.json({
+    success: true,
+    message: 'Accounts objection raised successfully',
+    application: transitionResult.application,
+    accountsBreakdown: transitionResult.application?.accountsBreakdown
   });
 }));
 

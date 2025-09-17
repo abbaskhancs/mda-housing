@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 
 export interface DocumentGenerationRequest {
   applicationId: string;
-  documentType: 'INTAKE_RECEIPT' | 'BCA_CLEARANCE' | 'HOUSING_CLEARANCE' | 'CHALLAN' | 'DISPATCH_MEMO' | 'TRANSFER_DEED';
+  documentType: 'INTAKE_RECEIPT' | 'BCA_CLEARANCE' | 'HOUSING_CLEARANCE' | 'ACCOUNTS_CLEARANCE' | 'CHALLAN' | 'DISPATCH_MEMO' | 'TRANSFER_DEED';
   templateData: PDFTemplateData;
   expiresInHours?: number;
 }
@@ -45,6 +45,12 @@ export class DocumentService {
           pdfBuffer = await pdfService.generateClearanceCertificate({
             ...templateData,
             sectionName: 'HOUSING'
+          });
+          break;
+        case 'ACCOUNTS_CLEARANCE':
+          pdfBuffer = await pdfService.generateClearanceCertificate({
+            ...templateData,
+            sectionName: 'ACCOUNTS'
           });
           break;
         case 'CHALLAN':
@@ -134,6 +140,7 @@ export class DocumentService {
       'INTAKE_RECEIPT',
       'BCA_CLEARANCE',
       'HOUSING_CLEARANCE',
+      'ACCOUNTS_CLEARANCE',
       'CHALLAN',
       'DISPATCH_MEMO',
       'TRANSFER_DEED'
@@ -263,18 +270,19 @@ export class DocumentService {
       'INTAKE_RECEIPT': 'intake-receipt',
       'BCA_CLEARANCE': 'bca-clearance',
       'HOUSING_CLEARANCE': 'housing-clearance',
+      'ACCOUNTS_CLEARANCE': 'accounts-clearance',
       'CHALLAN': 'challan',
       'DISPATCH_MEMO': 'dispatch-memo',
       'TRANSFER_DEED': 'transfer-deed'
     };
-    
+
     const typeSlug = typeMap[documentType] || documentType.toLowerCase();
     return `${applicationId}-${typeSlug}-${timestamp}.pdf`;
   }
 
   private shouldGenerateDocument(
-    applicationId: string, 
-    documentType: string, 
+    applicationId: string,
+    documentType: string,
     templateData: PDFTemplateData
   ): boolean {
     // Logic to determine if document should be generated based on application state
@@ -285,6 +293,8 @@ export class DocumentService {
         return templateData.clearances?.some(c => c.section === 'BCA') || false;
       case 'HOUSING_CLEARANCE':
         return templateData.clearances?.some(c => c.section === 'HOUSING') || false;
+      case 'ACCOUNTS_CLEARANCE':
+        return templateData.clearances?.some(c => c.section === 'ACCOUNTS') || false;
       case 'CHALLAN':
         return !!templateData.accountsBreakdown;
       case 'DISPATCH_MEMO':

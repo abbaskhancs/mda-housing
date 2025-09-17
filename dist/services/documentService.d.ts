@@ -1,7 +1,7 @@
 import { PDFTemplateData } from './pdfService';
 export interface DocumentGenerationRequest {
     applicationId: string;
-    documentType: 'INTAKE_RECEIPT' | 'BCA_CLEARANCE' | 'HOUSING_CLEARANCE' | 'CHALLAN' | 'DISPATCH_MEMO' | 'TRANSFER_DEED';
+    documentType: 'INTAKE_RECEIPT' | 'BCA_CLEARANCE' | 'HOUSING_CLEARANCE' | 'ACCOUNTS_CLEARANCE' | 'CHALLAN' | 'DISPATCH_MEMO' | 'TRANSFER_DEED';
     templateData: PDFTemplateData;
     expiresInHours?: number;
 }

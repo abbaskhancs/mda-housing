@@ -250,19 +250,19 @@
         <div class="info-grid">
             <div class="info-item">
                 <span class="info-label">چالان نمبر:</span>
-                <span class="info-value">{{accountsBreakdown.id}}</span>
+                <span class="info-value">{{accountsBreakdown.challanNo}}</span>
             </div>
             <div class="info-item">
                 <span class="info-label">تاریخ:</span>
-                <span class="info-value">{{formatDate accountsBreakdown.createdAt}}</span>
+                <span class="info-value">{{formatDate accountsBreakdown.challanDate}}</span>
             </div>
             <div class="info-item">
                 <span class="info-label">درخواست نمبر:</span>
                 <span class="info-value">{{application.id}}</span>
             </div>
             <div class="info-item">
-                <span class="info-label">ادائیگی کی تاریخ:</span>
-                <span class="info-value">{{formatDate accountsBreakdown.paymentDueDate}}</span>
+                <span class="info-label">کل رقم (الفاظ میں):</span>
+                <span class="info-value">{{accountsBreakdown.totalAmountWords}}</span>
             </div>
         </div>
     </div>
@@ -271,8 +271,12 @@
         <h3>ادائیگی کی تفصیلات</h3>
         <div class="info-grid">
             <div class="info-item">
-                <span class="info-label">درخواست کنندہ:</span>
-                <span class="info-value">{{application.applicantName}}</span>
+                <span class="info-label">فروخت کنندہ:</span>
+                <span class="info-value">{{seller.name}}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">خریدار:</span>
+                <span class="info-value">{{buyer.name}}</span>
             </div>
             <div class="info-item">
                 <span class="info-label">پلاٹ نمبر:</span>
@@ -281,10 +285,6 @@
             <div class="info-item">
                 <span class="info-label">بلاک:</span>
                 <span class="info-value">{{plot.block}}</span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">سکشن:</span>
-                <span class="info-value">{{plot.section}}</span>
             </div>
         </div>
         
@@ -296,40 +296,52 @@
                 </tr>
             </thead>
             <tbody>
+                {{#if accountsBreakdown.arrears}}
+                <tr>
+                    <td>بقایا</td>
+                    <td class="amount">{{formatCurrency accountsBreakdown.arrears}}</td>
+                </tr>
+                {{/if}}
+                {{#if accountsBreakdown.surcharge}}
+                <tr>
+                    <td>اضافی چارج</td>
+                    <td class="amount">{{formatCurrency accountsBreakdown.surcharge}}</td>
+                </tr>
+                {{/if}}
+                {{#if accountsBreakdown.nonUser}}
+                <tr>
+                    <td>غیر صارف فیس</td>
+                    <td class="amount">{{formatCurrency accountsBreakdown.nonUser}}</td>
+                </tr>
+                {{/if}}
                 {{#if accountsBreakdown.transferFee}}
                 <tr>
                     <td>منتقلی فیس</td>
                     <td class="amount">{{formatCurrency accountsBreakdown.transferFee}}</td>
                 </tr>
                 {{/if}}
-                {{#if accountsBreakdown.stampDuty}}
+                {{#if accountsBreakdown.attorneyFee}}
                 <tr>
-                    <td>سٹامپ ڈیوٹی</td>
-                    <td class="amount">{{formatCurrency accountsBreakdown.stampDuty}}</td>
+                    <td>وکیل فیس</td>
+                    <td class="amount">{{formatCurrency accountsBreakdown.attorneyFee}}</td>
                 </tr>
                 {{/if}}
-                {{#if accountsBreakdown.registrationFee}}
+                {{#if accountsBreakdown.water}}
                 <tr>
-                    <td>رجسٹریشن فیس</td>
-                    <td class="amount">{{formatCurrency accountsBreakdown.registrationFee}}</td>
+                    <td>پانی کی فیس</td>
+                    <td class="amount">{{formatCurrency accountsBreakdown.water}}</td>
                 </tr>
                 {{/if}}
-                {{#if accountsBreakdown.mutationFee}}
+                {{#if accountsBreakdown.suiGas}}
                 <tr>
-                    <td>میوٹیشن فیس</td>
-                    <td class="amount">{{formatCurrency accountsBreakdown.mutationFee}}</td>
+                    <td>سوئی گیس فیس</td>
+                    <td class="amount">{{formatCurrency accountsBreakdown.suiGas}}</td>
                 </tr>
                 {{/if}}
-                {{#if accountsBreakdown.otherCharges}}
+                {{#if accountsBreakdown.additional}}
                 <tr>
-                    <td>دیگر چارجز</td>
-                    <td class="amount">{{formatCurrency accountsBreakdown.otherCharges}}</td>
-                </tr>
-                {{/if}}
-                {{#if accountsBreakdown.lateFee}}
-                <tr>
-                    <td>لیٹ فیس</td>
-                    <td class="amount">{{formatCurrency accountsBreakdown.lateFee}}</td>
+                    <td>اضافی فیس</td>
+                    <td class="amount">{{formatCurrency accountsBreakdown.additional}}</td>
                 </tr>
                 {{/if}}
             </tbody>
@@ -342,11 +354,9 @@
             </div>
         </div>
         
-        {{#if accountsBreakdown.paymentDueDate}}
         <div class="urgent">
-            <strong>ادائیگی کی آخری تاریخ: {{formatDate accountsBreakdown.paymentDueDate}}</strong>
+            <strong>کل رقم (الفاظ میں): {{accountsBreakdown.totalAmountWords}}</strong>
         </div>
-        {{/if}}
         
         <div class="payment-instructions">
             <h4>ادائیگی کی ہدایات</h4>
@@ -366,13 +376,13 @@
         </div>
         <div class="signature-box">
             <h4>تاریخ</h4>
-            <p>{{formatDate accountsBreakdown.createdAt}}</p>
+            <p>{{formatDate accountsBreakdown.challanDate}}</p>
         </div>
     </div>
     
     <div class="footer">
         <p>یہ چالان اکاؤنٹس شعبے کی جانب سے جاری کیا گیا ہے</p>
-        <p>درخواست نمبر: {{application.id}} | چالان نمبر: {{accountsBreakdown.id}}</p>
+        <p>درخواست نمبر: {{application.id}} | چالان نمبر: {{accountsBreakdown.challanNo}}</p>
         <div class="qr-code">
             {{#if qrCodeDataURL}}
             <img src="{{qrCodeDataURL}}" alt="QR Code" style="width: 100%; height: 100%; object-fit: contain;">

@@ -149,11 +149,24 @@ exports.clearanceSchemas = {
 // Accounts schemas
 exports.accountsSchemas = {
     create: zod_1.z.object({
-        totalAmount: positiveDecimalSchema,
-        challanUrl: zod_1.z.string().url('Invalid challan URL').optional()
+        arrears: positiveDecimalSchema.optional(),
+        surcharge: positiveDecimalSchema.optional(),
+        nonUser: positiveDecimalSchema.optional(),
+        transferFee: positiveDecimalSchema.optional(),
+        attorneyFee: positiveDecimalSchema.optional(),
+        water: positiveDecimalSchema.optional(),
+        suiGas: positiveDecimalSchema.optional(),
+        additional: positiveDecimalSchema.optional()
     }),
     update: zod_1.z.object({
-        totalAmount: positiveDecimalSchema.optional(),
+        arrears: positiveDecimalSchema.optional(),
+        surcharge: positiveDecimalSchema.optional(),
+        nonUser: positiveDecimalSchema.optional(),
+        transferFee: positiveDecimalSchema.optional(),
+        attorneyFee: positiveDecimalSchema.optional(),
+        water: positiveDecimalSchema.optional(),
+        suiGas: positiveDecimalSchema.optional(),
+        additional: positiveDecimalSchema.optional(),
         paidAmount: positiveDecimalSchema.optional(),
         challanUrl: zod_1.z.string().url('Invalid challan URL').optional()
     }),
@@ -163,6 +176,9 @@ exports.accountsSchemas = {
     }),
     getById: zod_1.z.object({
         id: zod_1.z.string().cuid('Invalid accounts breakdown ID')
+    }),
+    generateChallan: zod_1.z.object({
+    // No additional parameters needed - uses existing breakdown
     })
 };
 // Review schemas

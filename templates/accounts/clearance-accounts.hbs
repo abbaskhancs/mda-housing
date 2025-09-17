@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ur" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>کلیرنس سرٹیفکیٹ - اکاؤنٹس</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Nastaliq Urdu', serif;
+            direction: rtl;
+            text-align: right;
+            line-height: 1.6;
+            color: #333;
+            background: white;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #2c5aa0;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #2c5aa0;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        .header h2 {
+            color: #666;
+            font-size: 20px;
+            font-weight: 400;
+        }
+        
+        .certificate-info {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .certificate-info h3 {
+            color: #2c5aa0;
+            font-size: 18px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 8px;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px dotted #ccc;
+        }
+        
+        .info-label {
+            font-weight: 700;
+            color: #495057;
+            min-width: 120px;
+        }
+        
+        .info-value {
+            color: #212529;
+            text-align: left;
+        }
+        
+        .payment-details {
+            background: white;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .payment-details h3 {
+            color: #2c5aa0;
+            font-size: 18px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 8px;
+        }
+        
+        .status-section {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .status-clear {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .status-objection {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        .status-pending {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        
+        .remarks {
+            background: #e9ecef;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        
+        .remarks h4 {
+            color: #495057;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        
+        .signature-section {
+            margin-top: 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+        
+        .signature-box {
+            text-align: center;
+            border-top: 1px solid #333;
+            padding-top: 10px;
+            min-width: 150px;
+        }
+        
+        .signature-box h4 {
+            color: #2c5aa0;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        
+        .signature-box p {
+            color: #666;
+            font-size: 12px;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            text-align: center;
+            border-top: 2px solid #e9ecef;
+            padding-top: 20px;
+        }
+        
+        .footer p {
+            color: #6c757d;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        .qr-code {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        
+        .amount-highlight {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-weight: 700;
+            color: #856404;
+        }
+        
+        @media print {
+            body {
+                padding: 0;
+            }
+            
+            .header, .certificate-info, .payment-details, .footer {
+                break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>محکمہ ہاؤسنگ</h1>
+        <h2>کلیرنس سرٹیفکیٹ - اکاؤنٹس</h2>
+    </div>
+    
+    <div class="certificate-info">
+        <h3>سرٹیفکیٹ کی تفصیلات</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">درخواست نمبر:</span>
+                <span class="info-value">{{application.id}}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">تاریخ:</span>
+                <span class="info-value">{{formatDate clearance.createdAt}}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">شعبہ:</span>
+                <span class="info-value">اکاؤنٹس</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">حالت:</span>
+                <span class="info-value">
+                    <span class="status-badge status-clear">
+                        کلیر
+                    </span>
+                </span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="payment-details">
+        <h3>درخواست کی تفصیلات</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">درخواست کنندہ:</span>
+                <span class="info-value">{{application.applicantName}}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">پلاٹ نمبر:</span>
+                <span class="info-value">{{plot.plotNumber}}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">بلاک:</span>
+                <span class="info-value">{{plot.block}}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">سکشن:</span>
+                <span class="info-value">{{plot.section}}</span>
+            </div>
+        </div>
+        
+        {{#if accountsBreakdown}}
+        <h4 style="color: #2c5aa0; margin: 20px 0 15px 0; border-bottom: 1px solid #dee2e6; padding-bottom: 8px;">ادائیگی کی تفصیلات</h4>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">کل رقم:</span>
+                <span class="info-value amount-highlight">Rs. {{formatCurrency accountsBreakdown.totalAmount}}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">ادا شدہ رقم:</span>
+                <span class="info-value amount-highlight">Rs. {{formatCurrency accountsBreakdown.paidAmount}}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">چالان نمبر:</span>
+                <span class="info-value">{{accountsBreakdown.challanNo}}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">ادائیگی کی تاریخ:</span>
+                <span class="info-value">{{formatDate accountsBreakdown.updatedAt}}</span>
+            </div>
+        </div>
+        {{/if}}
+        
+        <div class="status-section status-clear">
+            <h4>کلیرنس کی حالت</h4>
+            <p><strong>نتیجہ:</strong> ادائیگی مکمل - اکاؤنٹس کلیر</p>
+            <p><strong>کلیر کرنے کی تاریخ:</strong> {{formatDate clearance.clearedAt}}</p>
+        </div>
+        
+        {{#if clearance.remarks}}
+        <div class="remarks">
+            <h4>تبصرات</h4>
+            <p>{{clearance.remarks}}</p>
+        </div>
+        {{/if}}
+    </div>
+    
+    <div class="signature-section">
+        <div class="signature-box">
+            <h4>اکاؤنٹس افسر</h4>
+            <p>دستخط</p>
+        </div>
+        <div class="signature-box">
+            <h4>تاریخ</h4>
+            <p>{{formatDate clearance.createdAt}}</p>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p>یہ سرٹیفکیٹ اکاؤنٹس شعبہ کی جانب سے جاری کیا گیا ہے</p>
+        <p>درخواست نمبر: {{application.id}}</p>
+        <div class="qr-code">
+            {{#if qrCodeDataURL}}
+            <img src="{{qrCodeDataURL}}" alt="QR Code" style="width: 100%; height: 100%; object-fit: contain;">
+            {{else}}
+            QR Code<br>
+            {{application.id}}
+            {{/if}}
+        </div>
+    </div>
+</body>
+</html>

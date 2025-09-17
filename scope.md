@@ -208,50 +208,113 @@ Milestone 4.2: ✅ Full flow click‑through in UI moves stages correctly. (Comp
 
 ---
 
-#### 6) OWO review for BCA/Housing
+#### 6) OWO review for BCA/Housing ✅ COMPLETED
 
-* Implement: **Mark BCA/Housing Reviewed** button creates `Review` (targetGroup `BCA_HOUSING`) and moves to `OWO_REVIEW_BCA_HOUSING`.
-* **Test & Validate**
+* ✅ Implement: **Mark BCA/Housing Reviewed** button creates `Review` (targetGroup `BCA_HOUSING`) and moves to `OWO_REVIEW_BCA_HOUSING`.
+* ✅ **Test & Validate**
 
-  * After click, a **Review** row appears (who/when/note) and stage reads **OWO\_REVIEW\_BCA\_HOUSING**.
+  * ✅ After click, a **Review** row appears (who/when/note) and stage reads **OWO\_REVIEW\_BCA\_HOUSING**.
+
+**Implementation Notes:**
+- ✅ **Backend**: Added `OWO_REVIEW_BCA_HOUSING` stage to workflow with sortOrder 7
+- ✅ **Backend**: Created `GUARD_BCA_HOUSING_REVIEW` guard to validate both BCA and Housing clearances are CLEAR
+- ✅ **Backend**: Created `GUARD_OWO_REVIEW_COMPLETE` guard to validate OWO review completion
+- ✅ **Backend**: Added workflow transitions: `BCA_HOUSING_CLEAR → OWO_REVIEW_BCA_HOUSING` and `OWO_REVIEW_BCA_HOUSING → ACCOUNTS_PENDING`
+- ✅ **Backend**: Enhanced review service auto-transition logic to handle BCA_HOUSING_CLEAR stage OWO reviews
+- ✅ **Backend**: Fixed auto-transition context validation by passing user information to guard execution
+- ✅ **Backend**: Added `/api/applications/owo/bca-housing-review` endpoint for OWO officers to get applications ready for review
+- ✅ **Frontend**: Created `/console/owo` page for OWO officers to review applications with completed BCA and Housing clearances
+- ✅ **Frontend**: Implemented "Mark BCA/Housing Reviewed" functionality with auto-transition to `OWO_REVIEW_BCA_HOUSING`
+- ✅ **Frontend**: Added OWO-specific API methods in `api.ts` service
+- ✅ **Auto-transition**: When OWO officer marks BCA/Housing as reviewed, application automatically transitions from `BCA_HOUSING_CLEAR` to `OWO_REVIEW_BCA_HOUSING`
+- ✅ **Validation**: Comprehensive acceptance test passes - review created, auto-transition occurs, stage updates correctly
 
 ---
 
-#### 7) Dispatch to Accounts (guarded)
+#### 7) Dispatch to Accounts (guarded) ✅ COMPLETED
 
-* Implement: **Send to Accounts** becomes enabled only with OWO review present; transition to `SENT_TO_ACCOUNTS`.
-* **Test & Validate**
+* ✅ Implement: **Send to Accounts** becomes enabled only with OWO review present; transition to `SENT_TO_ACCOUNTS`.
+* ✅ **Test & Validate**
 
-  * Stage updates; Accounts tab becomes editable; Accounts **Clearance** shows **PENDING**.
+  * ✅ Stage updates; Accounts tab becomes editable; Accounts **Clearance** shows **PENDING**.
+
+**Implementation Notes:**
+- ✅ **Backend**: Added `SENT_TO_ACCOUNTS` stage to workflow with sortOrder 8
+- ✅ **Backend**: Updated workflow transitions: `OWO_REVIEW_BCA_HOUSING → SENT_TO_ACCOUNTS` with `GUARD_OWO_REVIEW_COMPLETE`
+- ✅ **Backend**: Added `SENT_TO_ACCOUNTS → ACCOUNTS_PENDING` transition with `GUARD_SENT_TO_ACCOUNTS`
+- ✅ **Backend**: Created `GUARD_SENT_TO_ACCOUNTS` guard to create pending accounts clearance
+- ✅ **Backend**: Enhanced `GUARD_OWO_REVIEW_COMPLETE` to validate OWO review for BCA/Housing completion
+- ✅ **Validation**: Comprehensive test passes - Send to Accounts enabled only with OWO review, transition works correctly
 
 ---
 
-#### 8) Accounts fee heads + challan generation
+#### 8) Accounts fee heads + challan generation ✅ COMPLETED
 
-* Implement: Editable grid for **arrears, surcharge, nonUser, transferFee, attorneyFee, water, suiGas, additional** with auto total + **amount in words**. **Generate Challan** persists challanNo/date and renders challan PDF.
-* **Test & Validate**
+* ✅ Implement: Editable grid for **arrears, surcharge, nonUser, transferFee, attorneyFee, water, suiGas, additional** with auto total + **amount in words**. **Generate Challan** persists challanNo/date and renders challan PDF.
+* ✅ **Test & Validate**
 
-  * Numbers format correctly; total updates live; challan PDF opens with same total & words.
+  * ✅ Numbers format correctly; total updates live; challan PDF opens with same total & words.
   * Audit shows “ACCOUNTS\_UPDATE”.
+**Implementation Notes:**
+- ✅ **Database Schema**: Extended `AccountsBreakdown` model with 8 fee heads: `arrears`, `surcharge`, `nonUser`, `transferFee`, `attorneyFee`, `water`, `suiGas`, `additional`
+- ✅ **Auto Calculation**: Total amount automatically calculated from sum of all fee heads
+- ✅ **Amount in Words**: Centralized utility function converts numbers to Urdu words (`بیس چھ ہزار روپے only`)
+- ✅ **Challan Generation**: Generates unique challan number (format: `CHAL-YYYYMMDD-XXXX`) and persists challan date
+- ✅ **PDF Generation**: Updated challan template with new fee heads, renders PDF with correct totals and words
+- ✅ **API Endpoints**:
+  - `POST /api/applications/:id/accounts` - Update fee heads
+  - `POST /api/applications/:id/accounts/generate-challan` - Generate challan number/date
+  - `GET /api/applications/:id/accounts/challan-pdf` - Download challan PDF
+- ✅ **Audit Logging**: Creates `ACCOUNTS_UPDATE` and `CHALLAN_GENERATED` audit entries
+- ✅ **Validation**: All fee heads validated as positive decimals with proper error handling
 
 ---
 
-#### 9) Accounts — Pending Payment / On Hold
+#### 9) Accounts — Pending Payment / On Hold ✅ COMPLETED
 
-* Implement: Buttons **Set Pending Payment** and **Raise Objection** set Accounts status and stage (`AWAITING_PAYMENT` or `ON_HOLD_ACCOUNTS`).
-* **Test & Validate**
+* ✅ Implement: Buttons **Set Pending Payment** and **Raise Objection** set Accounts status and stage (`AWAITING_PAYMENT` or `ON_HOLD_ACCOUNTS`).
+* ✅ **Test & Validate**
 
-  * Stage changes appropriately; Summary shows Accounts status; OWO sees reason in Accounts card.
+  * ✅ Stage changes appropriately; Summary shows Accounts status; OWO sees reason in Accounts card.
+
+**Implementation Notes:**
+- ✅ **Database Schema**: Added `accountsStatus`, `objectionReason`, `objectionDate`, `resolvedDate` fields to `AccountsBreakdown` model
+- ✅ **Workflow Stages**: Added `AWAITING_PAYMENT` and `ON_HOLD_ACCOUNTS` stages with proper sort order
+- ✅ **Workflow Transitions**:
+  - `ACCOUNTS_PENDING → AWAITING_PAYMENT` (guarded by `GUARD_SET_PENDING_PAYMENT`)
+  - `ACCOUNTS_PENDING → ON_HOLD_ACCOUNTS` (guarded by `GUARD_RAISE_ACCOUNTS_OBJECTION`)
+  - `ON_HOLD_ACCOUNTS → ACCOUNTS_PENDING` (guarded by `GUARD_ACCOUNTS_OBJECTION_RESOLVED`)
+- ✅ **Workflow Guards**:
+  - `GUARD_SET_PENDING_PAYMENT`: Sets accounts status to AWAITING_PAYMENT
+  - `GUARD_RAISE_ACCOUNTS_OBJECTION`: Sets accounts status to ON_HOLD with objection reason
+  - `GUARD_ACCOUNTS_OBJECTION_RESOLVED`: Resolves objection and returns to PENDING status
+- ✅ **API Endpoints**:
+  - `POST /api/applications/:id/accounts/set-pending-payment` - Set accounts to pending payment
+  - `POST /api/applications/:id/accounts/raise-objection` - Raise objection with reason
+- ✅ **Audit Logging**: Creates audit entries for all accounts status changes
+- ✅ **Validation**: Proper validation for objection reasons and stage requirements
+- ✅ **Status Tracking**: Accounts breakdown shows current status and objection details
 
 ---
 
-#### 10) Accounts — Mark Paid & Verified → Accounts CLEAR
+#### 10) Accounts — Mark Paid & Verified → Accounts CLEAR ✅
 
-* Implement: **Mark Paid & Verified** posts `/accounts/verify-payment`, flips `paid=true`, creates/updates Accounts `Clearance=CLEAR`, and moves stage to **ACCOUNTS\_CLEAR** (if coming from `SENT_TO_ACCOUNTS`/`AWAITING_PAYMENT`).
-* **Test & Validate**
+* ✅ Implement: **Mark Paid & Verified** posts `/accounts/verify-payment`, flips `paid=true`, creates/updates Accounts `Clearance=CLEAR`, and moves stage to **ACCOUNTS\_CLEAR** (if coming from `SENT_TO_ACCOUNTS`/`AWAITING_PAYMENT`).
+* ✅ **Test & Validate**
 
-  * Stage shows **ACCOUNTS\_CLEAR**; Clearance PDF (Accounts) link appears and opens.
-  * Refresh page: state persists; audit shows transition.
+  * ✅ Stage shows **ACCOUNTS\_CLEAR**; Clearance PDF (Accounts) link appears and opens.
+  * ✅ Refresh page: state persists; audit shows transition.
+
+**Implementation Notes:**
+- ✅ **Database Schema**: Added `ACCOUNTS_CLEAR` stage with proper sort order
+- ✅ **Workflow Transitions**: Added transitions from `SENT_TO_ACCOUNTS` and `AWAITING_PAYMENT` to `ACCOUNTS_CLEAR`
+- ✅ **Workflow Guards**: Implemented `GUARD_ACCOUNTS_CLEAR` to validate payment verification and accounts clearance
+- ✅ **Payment Verification**: Enhanced `/accounts/verify-payment` endpoint to create ACCOUNTS clearance with CLEAR status
+- ✅ **Auto-transition Logic**: Updated `checkAutoProgressAfterPayment` to transition to `ACCOUNTS_CLEAR` when payment is verified
+- ✅ **PDF Generation**: Added `/accounts/generate-pdf` endpoint for accounts clearance certificate
+- ✅ **Document Service**: Added `ACCOUNTS_CLEARANCE` document type support
+- ✅ **Template**: Created `templates/accounts/clearance-accounts.hbs` for accounts clearance PDF
+- ✅ **Manual Transition**: Verified manual transition from `AWAITING_PAYMENT` to `ACCOUNTS_CLEAR` works correctly
 
 ---
 

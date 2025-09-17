@@ -49,6 +49,14 @@ export declare const GUARD_BCA_RESOLVED: GuardFunction;
  */
 export declare const GUARD_HOUSING_RESOLVED: GuardFunction;
 /**
+ * GUARD_BCA_HOUSING_REVIEW: Check if BCA and Housing clearances are ready for OWO review
+ */
+export declare const GUARD_BCA_HOUSING_REVIEW: GuardFunction;
+/**
+ * GUARD_OWO_REVIEW_COMPLETE: Check if OWO review for BCA/Housing is complete
+ */
+export declare const GUARD_OWO_REVIEW_COMPLETE: GuardFunction;
+/**
  * GUARD_ACCOUNTS_CALCULATED: Check if accounts breakdown has been calculated
  */
 export declare const GUARD_ACCOUNTS_CALCULATED: GuardFunction;
@@ -56,6 +64,10 @@ export declare const GUARD_ACCOUNTS_CALCULATED: GuardFunction;
  * GUARD_PAYMENT_VERIFIED: Check if payment has been verified
  */
 export declare const GUARD_PAYMENT_VERIFIED: GuardFunction;
+/**
+ * GUARD_ACCOUNTS_CLEAR: Check if payment has been verified and accounts clearance is complete
+ */
+export declare const GUARD_ACCOUNTS_CLEAR: GuardFunction;
 /**
  * GUARD_APPROVAL_COMPLETE: Check if approval has been completed
  */
@@ -65,6 +77,10 @@ export declare const GUARD_APPROVAL_COMPLETE: GuardFunction;
  */
 export declare const GUARD_APPROVAL_REJECTED: GuardFunction;
 /**
+ * GUARD_SENT_TO_ACCOUNTS: Create pending clearance for Accounts when transitioning to SENT_TO_ACCOUNTS
+ */
+export declare const GUARD_SENT_TO_ACCOUNTS: GuardFunction;
+/**
  * GUARD_SENT_TO_BCA_HOUSING: Create pending clearances for BCA and Housing when transitioning to SENT_TO_BCA_HOUSING
  */
 export declare const GUARD_SENT_TO_BCA_HOUSING: GuardFunction;
@@ -72,6 +88,10 @@ export declare const GUARD_SENT_TO_BCA_HOUSING: GuardFunction;
  * GUARD_DEED_FINALIZED: Check if transfer deed has been finalized
  */
 export declare const GUARD_DEED_FINALIZED: GuardFunction;
+/**
+ * GUARD_ACCOUNTS_REVIEWED: Check if accounts have been reviewed by OWO
+ */
+export declare const GUARD_ACCOUNTS_REVIEWED: GuardFunction;
 /**
  * GUARDS map - Central registry of all workflow guards
  */

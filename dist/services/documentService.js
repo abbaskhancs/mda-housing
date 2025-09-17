@@ -29,6 +29,12 @@ class DocumentService {
                         sectionName: 'HOUSING'
                     });
                     break;
+                case 'ACCOUNTS_CLEARANCE':
+                    pdfBuffer = await pdfService_1.pdfService.generateClearanceCertificate({
+                        ...templateData,
+                        sectionName: 'ACCOUNTS'
+                    });
+                    break;
                 case 'CHALLAN':
                     pdfBuffer = await pdfService_1.pdfService.generateChallan(templateData);
                     break;
@@ -105,6 +111,7 @@ class DocumentService {
             'INTAKE_RECEIPT',
             'BCA_CLEARANCE',
             'HOUSING_CLEARANCE',
+            'ACCOUNTS_CLEARANCE',
             'CHALLAN',
             'DISPATCH_MEMO',
             'TRANSFER_DEED'
@@ -221,6 +228,7 @@ class DocumentService {
             'INTAKE_RECEIPT': 'intake-receipt',
             'BCA_CLEARANCE': 'bca-clearance',
             'HOUSING_CLEARANCE': 'housing-clearance',
+            'ACCOUNTS_CLEARANCE': 'accounts-clearance',
             'CHALLAN': 'challan',
             'DISPATCH_MEMO': 'dispatch-memo',
             'TRANSFER_DEED': 'transfer-deed'
@@ -237,6 +245,8 @@ class DocumentService {
                 return templateData.clearances?.some(c => c.section === 'BCA') || false;
             case 'HOUSING_CLEARANCE':
                 return templateData.clearances?.some(c => c.section === 'HOUSING') || false;
+            case 'ACCOUNTS_CLEARANCE':
+                return templateData.clearances?.some(c => c.section === 'ACCOUNTS') || false;
             case 'CHALLAN':
                 return !!templateData.accountsBreakdown;
             case 'DISPATCH_MEMO':

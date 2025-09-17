@@ -111,7 +111,9 @@ export const createReview = async (
       autoTransitionResult = await checkAutoTransitionAfterReview(
         applicationId,
         result.application.currentStageId,
-        result.section.code
+        result.section.code,
+        reviewerId,
+        'OWO' // Default role for review auto-transitions
       );
     }
 
@@ -128,7 +130,9 @@ export const createReview = async (
 const checkAutoTransitionAfterReview = async (
   applicationId: string,
   currentStageId: string,
-  sectionCode: string
+  sectionCode: string,
+  userId: string,
+  userRole: string
 ): Promise<ReviewResult['autoTransition']> => {
   try {
     // Get current stage
@@ -148,6 +152,10 @@ const checkAutoTransitionAfterReview = async (
       // OWO review completed - can move to BCA_PENDING or HOUSING_PENDING
       nextStageCode = 'BCA_PENDING'; // Default to BCA_PENDING
       guardName = 'GUARD_SCRUTINY_COMPLETE';
+    } else if (sectionCode === 'OWO' && currentStage.code === 'BCA_HOUSING_CLEAR') {
+      // OWO review for BCA/Housing completed - can move to OWO_REVIEW_BCA_HOUSING
+      nextStageCode = 'OWO_REVIEW_BCA_HOUSING';
+      guardName = 'GUARD_BCA_HOUSING_REVIEW';
     } else if (sectionCode === 'APPROVER' && currentStage.code === 'READY_FOR_APPROVAL') {
       // Approver review completed - can move to APPROVED
       nextStageCode = 'APPROVED';
@@ -170,8 +178,8 @@ const checkAutoTransitionAfterReview = async (
     // Execute guard to validate transition
     const guardContext = {
       applicationId,
-      userId: '', // Will be set by the endpoint
-      userRole: '', // Will be set by the endpoint
+      userId,
+      userRole,
       fromStageId: currentStageId,
       toStageId: nextStage.id,
       additionalData: {}
@@ -206,7 +214,7 @@ const checkAutoTransitionAfterReview = async (
     await prisma.auditLog.create({
       data: {
         applicationId,
-        userId: '', // Will be set by the endpoint
+        userId,
         action: 'AUTO_STAGE_TRANSITION',
         fromStageId: currentStageId,
         toStageId: nextStage.id,
@@ -298,7 +306,9 @@ export const updateReview = async (
       autoTransitionResult = await checkAutoTransitionAfterReview(
         result.application.id,
         result.application.currentStageId,
-        result.section.code
+        result.section.code,
+        reviewerId,
+        'OWO' // Default role for review auto-transitions
       );
     }
 

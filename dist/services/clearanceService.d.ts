@@ -7,7 +7,7 @@ export interface ClearanceResult {
         guardResult: any;
     };
 }
-export declare const createClearance: (applicationId: string, sectionId: string, statusId: string, remarks: string | null, userId: string, signedPdfUrl?: string) => Promise<ClearanceResult>;
+export declare const createClearance: (applicationId: string, sectionId: string, statusId: string, remarks: string | null, userId: string, signedPdfUrl?: string, userRole?: string) => Promise<ClearanceResult>;
 export declare const getClearancesByApplication: (applicationId: string) => Promise<({
     status: {
         id: string;

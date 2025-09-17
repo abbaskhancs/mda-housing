@@ -241,12 +241,38 @@ model Clearance {
 model AccountsBreakdown {
   id             String   @id @default(cuid())
   applicationId  String   @unique
+
+  // Fee heads as specified in the task
+  arrears        Decimal  @default(0)
+  surcharge      Decimal  @default(0)
+  nonUser        Decimal  @default(0)
+  transferFee    Decimal  @default(0)
+  attorneyFee    Decimal  @default(0)
+  water          Decimal  @default(0)
+  suiGas         Decimal  @default(0)
+  additional     Decimal  @default(0)
+
+  // Calculated fields
   totalAmount    Decimal
+  totalAmountWords String?
   paidAmount     Decimal  @default(0)
   remainingAmount Decimal
+
+  // Challan information
+  challanNo      String?
+  challanDate    DateTime?
   challanUrl     String?
+
+  // Payment verification
   paymentVerified Boolean @default(false)
   verifiedAt     DateTime?
+
+  // Accounts status and objection handling
+  accountsStatus String?  // PENDING, AWAITING_PAYMENT, ON_HOLD
+  objectionReason String?
+  objectionDate  DateTime?
+  resolvedDate   DateTime?
+
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

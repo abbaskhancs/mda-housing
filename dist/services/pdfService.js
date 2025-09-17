@@ -10,6 +10,7 @@ const promises_1 = __importDefault(require("fs/promises"));
 const path_1 = __importDefault(require("path"));
 const qrcode_1 = __importDefault(require("qrcode"));
 const logger_1 = require("../config/logger");
+const numberToWords_1 = require("../utils/numberToWords");
 class PDFService {
     constructor() {
         this.browser = null;
@@ -84,15 +85,9 @@ class PDFService {
             };
             return docTypeMap[docType] || docType;
         });
-        // Number to words helper (basic implementation)
+        // Number to words helper (using centralized utility)
         handlebars_1.default.registerHelper('formatCurrencyInWords', (amount) => {
-            if (!amount)
-                return 'صفر';
-            // This is a basic implementation - in production, you'd want a proper number-to-words library
-            const words = ['صفر', 'ایک', 'دو', 'تین', 'چار', 'پانچ', 'چھ', 'سات', 'آٹھ', 'نو', 'دس'];
-            if (amount <= 10)
-                return words[amount];
-            return amount.toString();
+            return (0, numberToWords_1.formatCurrencyInWordsHelper)(amount);
         });
     }
     async initialize() {
@@ -202,6 +197,11 @@ class PDFService {
         return this.generatePDF('intake/receipt.hbs', data);
     }
     async generateClearanceCertificate(data) {
+        // Use specific template for accounts clearance
+        if (data.sectionName === 'ACCOUNTS') {
+            return this.generatePDF('accounts/clearance-accounts.hbs', data);
+        }
+        // Use generic template for BCA and Housing
         return this.generatePDF('clearance/clearance-bca-housing.hbs', data);
     }
     async generateChallan(data) {

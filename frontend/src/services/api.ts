@@ -255,6 +255,11 @@ class ApiService {
     return this.post(`/api/applications/${applicationId}/housing/generate-pdf`, {});
   }
 
+  // OWO Console methods
+  async getOWOBCAHousingReviewApplications(): Promise<ApiResponse<{ applications: Application[] }>> {
+    return this.get<{ applications: Application[] }>('/api/applications/owo/bca-housing-review');
+  }
+
   // Accounts methods
   async verifyPayment(applicationId: string, challanNumber: string, paidAmount: number, remarks?: string): Promise<ApiResponse<any>> {
     return this.post(`/api/applications/${applicationId}/accounts/verify-payment`, {

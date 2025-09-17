@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { logger } from '../config/logger';
 import { executeGuard, validateGuardContext } from '../guards/workflowGuards';
+import { formatCurrencyInWords } from '../utils/numberToWords';
 
 const prisma = new PrismaClient();
 
@@ -15,13 +16,29 @@ export interface AccountsResult {
   clearanceCreated?: any;
 }
 
+export interface FeeHeads {
+  arrears: number;
+  surcharge: number;
+  nonUser: number;
+  transferFee: number;
+  attorneyFee: number;
+  water: number;
+  suiGas: number;
+  additional: number;
+}
+
 export const upsertAccountsBreakdown = async (
   applicationId: string,
-  totalAmount: number,
-  challanUrl: string | null,
-  userId: string
+  feeHeads: FeeHeads,
+  challanNo?: string,
+  challanDate?: Date,
+  userId?: string
 ): Promise<AccountsResult> => {
   try {
+    // Calculate total amount from fee heads
+    const totalAmount = Object.values(feeHeads).reduce((sum, amount) => sum + amount, 0);
+    const totalAmountWords = formatCurrencyInWords(totalAmount);
+
     // Use transaction to ensure atomicity
     const result = await prisma.$transaction(async (tx) => {
       // Get application with current stage
@@ -46,9 +63,12 @@ export const upsertAccountsBreakdown = async (
         accountsBreakdown = await tx.accountsBreakdown.update({
           where: { id: application.accountsBreakdown.id },
           data: {
+            ...feeHeads,
             totalAmount,
+            totalAmountWords,
             remainingAmount,
-            challanUrl,
+            ...(challanNo && { challanNo }),
+            ...(challanDate && { challanDate }),
             updatedAt: new Date()
           }
         });
@@ -57,24 +77,29 @@ export const upsertAccountsBreakdown = async (
         accountsBreakdown = await tx.accountsBreakdown.create({
           data: {
             applicationId,
+            ...feeHeads,
             totalAmount,
+            totalAmountWords,
             remainingAmount,
-            challanUrl
+            ...(challanNo && { challanNo }),
+            ...(challanDate && { challanDate })
           }
         });
       }
 
       // Create audit log
-      await tx.auditLog.create({
-        data: {
-          applicationId,
-          userId,
-          action: 'ACCOUNTS_UPSERTED',
-          details: `Accounts breakdown upserted: Total: ${totalAmount}, Remaining: ${remainingAmount}`,
-          ipAddress: undefined, // Will be set by the endpoint
-          userAgent: undefined // Will be set by the endpoint
-        }
-      });
+      if (userId) {
+        await tx.auditLog.create({
+          data: {
+            applicationId,
+            userId,
+            action: 'ACCOUNTS_UPDATE',
+            details: `Accounts breakdown updated: Total: ${totalAmount} (${totalAmountWords}), Remaining: ${remainingAmount}`,
+            ipAddress: undefined, // Will be set by the endpoint
+            userAgent: undefined // Will be set by the endpoint
+          }
+        });
+      }
 
       return {
         application,
@@ -292,6 +317,78 @@ const checkAutoProgressAfterPayment = async (
       return undefined;
     }
 
+    // Check if we should move from SENT_TO_ACCOUNTS or AWAITING_PAYMENT to ACCOUNTS_CLEAR
+    if (currentStage.code === 'SENT_TO_ACCOUNTS' || currentStage.code === 'AWAITING_PAYMENT') {
+      const nextStage = await prisma.wfStage.findFirst({
+        where: { code: 'ACCOUNTS_CLEAR' }
+      });
+
+      if (!nextStage) {
+        return undefined;
+      }
+
+      // Execute guard to validate transition
+      const guardContext = {
+        applicationId,
+        userId: '', // Will be set by the endpoint
+        userRole: '', // Will be set by the endpoint
+        fromStageId: currentStageId,
+        toStageId: nextStage.id,
+        additionalData: {}
+      };
+
+      if (!validateGuardContext(guardContext)) {
+        return undefined;
+      }
+
+      const guardResult = await executeGuard('GUARD_ACCOUNTS_CLEAR', guardContext);
+
+      if (!guardResult.canTransition) {
+        logger.warn(`Auto-progress blocked by guard GUARD_ACCOUNTS_CLEAR: ${guardResult.reason}`);
+        return undefined;
+      }
+
+      // Perform the transition
+      const updatedApplication = await prisma.application.update({
+        where: { id: applicationId },
+        data: {
+          previousStageId: currentStageId,
+          currentStageId: nextStage.id,
+          updatedAt: new Date()
+        },
+        include: {
+          currentStage: true,
+          previousStage: true
+        }
+      });
+
+      // Create audit log for auto-transition
+      await prisma.auditLog.create({
+        data: {
+          applicationId,
+          userId: '', // Will be set by the endpoint
+          action: 'AUTO_STAGE_TRANSITION',
+          fromStageId: currentStageId,
+          toStageId: nextStage.id,
+          details: `Auto-transitioned from ${currentStage.code} to ${nextStage.code} after payment verification`,
+          ipAddress: undefined,
+          userAgent: undefined
+        }
+      });
+
+      logger.info(`Auto-transitioned application ${applicationId} from ${currentStage.code} to ${nextStage.code}`);
+
+      return {
+        fromStage: updatedApplication.previousStage,
+        toStage: updatedApplication.currentStage,
+        guard: 'GUARD_ACCOUNTS_CLEAR',
+        guardResult: {
+          reason: guardResult.reason,
+          metadata: guardResult.metadata
+        }
+      };
+    }
+
     // Check if we should move from PAYMENT_PENDING to READY_FOR_APPROVAL
     if (currentStage.code === 'PAYMENT_PENDING') {
       const nextStage = await prisma.wfStage.findFirst({
@@ -415,6 +512,72 @@ const createAccountsClearance = async (applicationId: string, userId: string) =>
     return clearance;
   } catch (error) {
     logger.error('Error creating ACCOUNTS clearance:', error);
+    throw error;
+  }
+};
+
+export const generateChallan = async (
+  applicationId: string,
+  userId: string
+): Promise<{ accountsBreakdown: any; challanNo: string; challanDate: Date }> => {
+  try {
+    // Get existing accounts breakdown
+    const existingBreakdown = await prisma.accountsBreakdown.findUnique({
+      where: { applicationId }
+    });
+
+    if (!existingBreakdown) {
+      throw new Error('Accounts breakdown not found. Please calculate fees first.');
+    }
+
+    // Generate challan number (format: CHAL-YYYYMMDD-XXXX)
+    const today = new Date();
+    const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
+    const randomSuffix = Math.floor(Math.random() * 9999).toString().padStart(4, '0');
+    const challanNo = `CHAL-${dateStr}-${randomSuffix}`;
+    const challanDate = today;
+
+    // Update accounts breakdown with challan info
+    const updatedBreakdown = await prisma.accountsBreakdown.update({
+      where: { id: existingBreakdown.id },
+      data: {
+        challanNo,
+        challanDate,
+        updatedAt: new Date()
+      },
+      include: {
+        application: {
+          include: {
+            seller: true,
+            buyer: true,
+            plot: true,
+            currentStage: true
+          }
+        }
+      }
+    });
+
+    // Create audit log
+    await prisma.auditLog.create({
+      data: {
+        applicationId,
+        userId,
+        action: 'CHALLAN_GENERATED',
+        details: `Challan generated: ${challanNo} dated ${challanDate.toISOString().slice(0, 10)}`,
+        ipAddress: undefined,
+        userAgent: undefined
+      }
+    });
+
+    logger.info(`Challan generated for application ${applicationId}: ${challanNo}`);
+
+    return {
+      accountsBreakdown: updatedBreakdown,
+      challanNo,
+      challanDate
+    };
+  } catch (error) {
+    logger.error('Error generating challan:', error);
     throw error;
   }
 };

@@ -269,27 +269,66 @@ export declare const clearanceSchemas: {
 };
 export declare const accountsSchemas: {
     create: z.ZodObject<{
-        totalAmount: z.ZodEffects<z.ZodString, number, string>;
-        challanUrl: z.ZodOptional<z.ZodString>;
+        arrears: z.ZodOptional<z.ZodEffects<z.ZodString, number, string>>;
+        surcharge: z.ZodOptional<z.ZodEffects<z.ZodString, number, string>>;
+        nonUser: z.ZodOptional<z.ZodEffects<z.ZodString, number, string>>;
+        transferFee: z.ZodOptional<z.ZodEffects<z.ZodString, number, string>>;
+        attorneyFee: z.ZodOptional<z.ZodEffects<z.ZodString, number, string>>;
+        water: z.ZodOptional<z.ZodEffects<z.ZodString, number, string>>;
+        suiGas: z.ZodOptional<z.ZodEffects<z.ZodString, number, string>>;
+        additional: z.ZodOptional<z.ZodEffects<z.ZodString, number, string>>;
     }, "strip", z.ZodTypeAny, {
-        totalAmount: number;
-        challanUrl?: string | undefined;
+        arrears?: number | undefined;
+        surcharge?: number | undefined;
+        nonUser?: number | undefined;
+        transferFee?: number | undefined;
+        attorneyFee?: number | undefined;
+        water?: number | undefined;
+        suiGas?: number | undefined;
+        additional?: number | undefined;
     }, {
-        totalAmount: string;
-        challanUrl?: string | undefined;
+        arrears?: string | undefined;
+        surcharge?: string | undefined;
+        nonUser?: string | undefined;
+        transferFee?: string | undefined;
+        attorneyFee?: string | undefined;
+        water?: string | undefined;
+        suiGas?: string | undefined;
+        additional?: string | undefined;
     }>;
     update: z.ZodObject<{
-        totalAmount: z.ZodOptional<z.ZodEffects<z.ZodString, number, string>>;
+        arrears: z.ZodOptional<z.ZodEffects<z.ZodString, number, string>>;
+        surcharge: z.ZodOptional<z.ZodEffects<z.ZodString, number, string>>;
+        nonUser: z.ZodOptional<z.ZodEffects<z.ZodString, number, string>>;
+        transferFee: z.ZodOptional<z.ZodEffects<z.ZodString, number, string>>;
+        attorneyFee: z.ZodOptional<z.ZodEffects<z.ZodString, number, string>>;
+        water: z.ZodOptional<z.ZodEffects<z.ZodString, number, string>>;
+        suiGas: z.ZodOptional<z.ZodEffects<z.ZodString, number, string>>;
+        additional: z.ZodOptional<z.ZodEffects<z.ZodString, number, string>>;
         paidAmount: z.ZodOptional<z.ZodEffects<z.ZodString, number, string>>;
         challanUrl: z.ZodOptional<z.ZodString>;
     }, "strip", z.ZodTypeAny, {
-        totalAmount?: number | undefined;
-        challanUrl?: string | undefined;
+        arrears?: number | undefined;
+        surcharge?: number | undefined;
+        nonUser?: number | undefined;
+        transferFee?: number | undefined;
+        attorneyFee?: number | undefined;
+        water?: number | undefined;
+        suiGas?: number | undefined;
+        additional?: number | undefined;
         paidAmount?: number | undefined;
-    }, {
-        totalAmount?: string | undefined;
         challanUrl?: string | undefined;
+    }, {
+        arrears?: string | undefined;
+        surcharge?: string | undefined;
+        nonUser?: string | undefined;
+        transferFee?: string | undefined;
+        attorneyFee?: string | undefined;
+        water?: string | undefined;
+        suiGas?: string | undefined;
+        additional?: string | undefined;
         paidAmount?: string | undefined;
+        challanUrl?: string | undefined;
     }>;
     verifyPayment: z.ZodObject<{
         paidAmount: z.ZodEffects<z.ZodString, number, string>;
@@ -308,6 +347,7 @@ export declare const accountsSchemas: {
     }, {
         id: string;
     }>;
+    generateChallan: z.ZodObject<{}, "strip", z.ZodTypeAny, {}, {}>;
 };
 export declare const reviewSchemas: {
     create: z.ZodObject<{

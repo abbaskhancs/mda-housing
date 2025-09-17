@@ -85,7 +85,8 @@ const createReview = async (applicationId, sectionId, reviewerId, remarks, statu
         // Check for auto-transition if requested and review is approved
         let autoTransitionResult = undefined;
         if (autoTransition && status === 'APPROVED') {
-            autoTransitionResult = await checkAutoTransitionAfterReview(applicationId, result.application.currentStageId, result.section.code);
+            autoTransitionResult = await checkAutoTransitionAfterReview(applicationId, result.application.currentStageId, result.section.code, reviewerId, 'OWO' // Default role for review auto-transitions
+            );
         }
         return {
             review: result.review,
@@ -98,7 +99,7 @@ const createReview = async (applicationId, sectionId, reviewerId, remarks, statu
     }
 };
 exports.createReview = createReview;
-const checkAutoTransitionAfterReview = async (applicationId, currentStageId, sectionCode) => {
+const checkAutoTransitionAfterReview = async (applicationId, currentStageId, sectionCode, userId, userRole) => {
     try {
         // Get current stage
         const currentStage = await prisma.wfStage.findUnique({
@@ -114,6 +115,11 @@ const checkAutoTransitionAfterReview = async (applicationId, currentStageId, sec
             // OWO review completed - can move to BCA_PENDING or HOUSING_PENDING
             nextStageCode = 'BCA_PENDING'; // Default to BCA_PENDING
             guardName = 'GUARD_SCRUTINY_COMPLETE';
+        }
+        else if (sectionCode === 'OWO' && currentStage.code === 'BCA_HOUSING_CLEAR') {
+            // OWO review for BCA/Housing completed - can move to OWO_REVIEW_BCA_HOUSING
+            nextStageCode = 'OWO_REVIEW_BCA_HOUSING';
+            guardName = 'GUARD_BCA_HOUSING_REVIEW';
         }
         else if (sectionCode === 'APPROVER' && currentStage.code === 'READY_FOR_APPROVAL') {
             // Approver review completed - can move to APPROVED
@@ -133,8 +139,8 @@ const checkAutoTransitionAfterReview = async (applicationId, currentStageId, sec
         // Execute guard to validate transition
         const guardContext = {
             applicationId,
-            userId: '', // Will be set by the endpoint
-            userRole: '', // Will be set by the endpoint
+            userId,
+            userRole,
             fromStageId: currentStageId,
             toStageId: nextStage.id,
             additionalData: {}
@@ -164,7 +170,7 @@ const checkAutoTransitionAfterReview = async (applicationId, currentStageId, sec
         await prisma.auditLog.create({
             data: {
                 applicationId,
-                userId: '', // Will be set by the endpoint
+                userId,
                 action: 'AUTO_STAGE_TRANSITION',
                 fromStageId: currentStageId,
                 toStageId: nextStage.id,
@@ -240,7 +246,8 @@ const updateReview = async (reviewId, reviewerId, remarks, status, autoTransitio
         // Check for auto-transition if requested and review is approved
         let autoTransitionResult = undefined;
         if (autoTransition && status === 'APPROVED') {
-            autoTransitionResult = await checkAutoTransitionAfterReview(result.application.id, result.application.currentStageId, result.section.code);
+            autoTransitionResult = await checkAutoTransitionAfterReview(result.application.id, result.application.currentStageId, result.section.code, reviewerId, 'OWO' // Default role for review auto-transitions
+            );
         }
         return {
             review: result.review,

@@ -4,6 +4,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import QRCode from 'qrcode';
 import { logger } from '../config/logger';
+import { formatCurrencyInWordsHelper } from '../utils/numberToWords';
 
 export interface PDFTemplateData {
   application: any;
@@ -100,13 +101,9 @@ export class PDFService {
       return docTypeMap[docType] || docType;
     });
 
-    // Number to words helper (basic implementation)
+    // Number to words helper (using centralized utility)
     handlebars.registerHelper('formatCurrencyInWords', (amount: number) => {
-      if (!amount) return 'صفر';
-      // This is a basic implementation - in production, you'd want a proper number-to-words library
-      const words = ['صفر', 'ایک', 'دو', 'تین', 'چار', 'پانچ', 'چھ', 'سات', 'آٹھ', 'نو', 'دس'];
-      if (amount <= 10) return words[amount];
-      return amount.toString();
+      return formatCurrencyInWordsHelper(amount);
     });
   }
 
@@ -239,6 +236,11 @@ export class PDFService {
   }
 
   async generateClearanceCertificate(data: PDFTemplateData): Promise<Buffer> {
+    // Use specific template for accounts clearance
+    if (data.sectionName === 'ACCOUNTS') {
+      return this.generatePDF('accounts/clearance-accounts.hbs', data);
+    }
+    // Use generic template for BCA and Housing
     return this.generatePDF('clearance/clearance-bca-housing.hbs', data);
   }
 

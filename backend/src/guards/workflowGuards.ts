@@ -507,6 +507,132 @@ export const GUARD_HOUSING_RESOLVED: GuardFunction = async (context: GuardContex
 };
 
 /**
+ * GUARD_BCA_HOUSING_REVIEW: Check if BCA and Housing clearances are ready for OWO review
+ */
+export const GUARD_BCA_HOUSING_REVIEW: GuardFunction = async (context: GuardContext): Promise<GuardResult> => {
+  try {
+    const application = await prisma.application.findUnique({
+      where: { id: context.applicationId },
+      include: {
+        clearances: {
+          include: {
+            section: true,
+            status: true
+          }
+        }
+      }
+    });
+
+    if (!application) {
+      return {
+        canTransition: false,
+        reason: 'Application not found'
+      };
+    }
+
+    // Check if both BCA and Housing clearances are CLEAR
+    const bcaClearance = application.clearances.find(
+      clearance => clearance.section.code === 'BCA' && clearance.status.code === 'CLEAR'
+    );
+
+    const housingClearance = application.clearances.find(
+      clearance => clearance.section.code === 'HOUSING' && clearance.status.code === 'CLEAR'
+    );
+
+    if (!bcaClearance) {
+      return {
+        canTransition: false,
+        reason: 'BCA clearance not obtained'
+      };
+    }
+
+    if (!housingClearance) {
+      return {
+        canTransition: false,
+        reason: 'Housing clearance not obtained'
+      };
+    }
+
+    return {
+      canTransition: true,
+      reason: 'Both BCA and Housing clearances obtained - ready for OWO review',
+      metadata: {
+        bcaClearanceId: bcaClearance.id,
+        housingClearanceId: housingClearance.id
+      }
+    };
+  } catch (error) {
+    logger.error('Error in GUARD_BCA_HOUSING_REVIEW:', error);
+    return {
+      canTransition: false,
+      reason: 'Error checking BCA and Housing clearance status'
+    };
+  }
+};
+
+/**
+ * GUARD_OWO_REVIEW_COMPLETE: Check if OWO review for BCA/Housing is complete
+ */
+export const GUARD_OWO_REVIEW_COMPLETE: GuardFunction = async (context: GuardContext): Promise<GuardResult> => {
+  try {
+    const application = await prisma.application.findUnique({
+      where: { id: context.applicationId },
+      include: {
+        reviews: {
+          include: {
+            section: true
+          }
+        }
+      }
+    });
+
+    if (!application) {
+      return {
+        canTransition: false,
+        reason: 'Application not found'
+      };
+    }
+
+    // Check if there's an OWO review for BCA_HOUSING with APPROVED status
+    const owoSection = await prisma.wfSection.findFirst({
+      where: { code: 'OWO' }
+    });
+
+    if (!owoSection) {
+      return {
+        canTransition: false,
+        reason: 'OWO section not found'
+      };
+    }
+
+    const owoReview = application.reviews.find(
+      review => review.sectionId === owoSection.id && review.status === 'APPROVED'
+    );
+
+    if (!owoReview) {
+      return {
+        canTransition: false,
+        reason: 'OWO review for BCA/Housing not completed'
+      };
+    }
+
+    return {
+      canTransition: true,
+      reason: 'OWO review for BCA/Housing completed',
+      metadata: {
+        owoReviewId: owoReview.id
+      }
+    };
+  } catch (error) {
+    logger.error('Error in GUARD_OWO_REVIEW_COMPLETE:', error);
+    return {
+      canTransition: false,
+      reason: 'Error checking OWO review status'
+    };
+  }
+};
+
+/**
  * GUARD_ACCOUNTS_CALCULATED: Check if accounts breakdown has been calculated
  */
 export const GUARD_ACCOUNTS_CALCULATED: GuardFunction = async (context: GuardContext): Promise<GuardResult> => {
@@ -599,7 +725,7 @@ export const GUARD_PAYMENT_VERIFIED: GuardFunction = async (context: GuardContex
     return {
       canTransition: true,
       reason: 'Payment verified',
-      metadata: { 
+      metadata: {
         paidAmount: application.accountsBreakdown.paidAmount,
         totalAmount: application.accountsBreakdown.totalAmount
       }
@@ -609,6 +735,82 @@ export const GUARD_PAYMENT_VERIFIED: GuardFunction = async (context: GuardContex
     return {
       canTransition: false,
       reason: 'Error checking payment verification'
+    };
+  }
+};
+
+/**
+ * GUARD_ACCOUNTS_CLEAR: Check if payment has been verified and accounts clearance is complete
+ */
+export const GUARD_ACCOUNTS_CLEAR: GuardFunction = async (context: GuardContext): Promise<GuardResult> => {
+  try {
+    const application = await prisma.application.findUnique({
+      where: { id: context.applicationId },
+      include: {
+        accountsBreakdown: true,
+        clearances: {
+          include: {
+            section: true,
+            status: true
+          }
+        }
+      }
+    });
+
+    if (!application) {
+      return {
+        canTransition: false,
+        reason: 'Application not found'
+      };
+    }
+
+    if (!application.accountsBreakdown) {
+      return {
+        canTransition: false,
+        reason: 'Accounts breakdown not found'
+      };
+    }
+
+    if (!application.accountsBreakdown.paymentVerified) {
+      return {
+        canTransition: false,
+        reason: 'Payment not verified'
+      };
+    }
+
+    if (Number(application.accountsBreakdown.paidAmount) < Number(application.accountsBreakdown.totalAmount)) {
+      return {
+        canTransition: false,
+        reason: 'Insufficient payment amount'
+      };
+    }
+
+    // Check if ACCOUNTS clearance exists and is CLEAR
+    const accountsClearance = application.clearances.find(
+      clearance => clearance.section.code === 'ACCOUNTS' && clearance.status.code === 'CLEAR'
+    );
+
+    if (!accountsClearance) {
+      return {
+        canTransition: false,
+        reason: 'Accounts clearance not found or not cleared'
+      };
+    }
+
+    return {
+      canTransition: true,
+      reason: 'Payment verified and accounts cleared',
+      metadata: {
+        paidAmount: application.accountsBreakdown.paidAmount,
+        totalAmount: application.accountsBreakdown.totalAmount,
+        accountsClearanceId: accountsClearance.id
+      }
+    };
+  } catch (error) {
+    logger.error('GUARD_ACCOUNTS_CLEAR error:', error);
+    return {
+      canTransition: false,
+      reason: 'Error checking accounts clearance'
     };
   }
 };
@@ -721,6 +923,104 @@ export const GUARD_APPROVAL_REJECTED: GuardFunction = async (context: GuardConte
     return {
       canTransition: false,
       reason: 'Error checking approval rejection'
+    };
+  }
+};
+
+/**
+ * GUARD_SENT_TO_ACCOUNTS: Create pending clearance for Accounts when transitioning to SENT_TO_ACCOUNTS
+ */
+export const GUARD_SENT_TO_ACCOUNTS: GuardFunction = async (context: GuardContext): Promise<GuardResult> => {
+  try {
+    const application = await prisma.application.findUnique({
+      where: { id: context.applicationId },
+      include: {
+        clearances: {
+          include: {
+            section: true,
+            status: true
+          }
+        }
+      }
+    });
+
+    if (!application) {
+      return {
+        canTransition: false,
+        reason: 'Application not found'
+      };
+    }
+
+    // Get the Accounts section
+    const accountsSection = await prisma.wfSection.findFirst({
+      where: { code: 'ACCOUNTS' }
+    });
+
+    if (!accountsSection) {
+      return {
+        canTransition: false,
+        reason: 'Accounts section not found'
+      };
+    }
+
+    // Get the PENDING status
+    const pendingStatus = await prisma.wfStatus.findFirst({
+      where: { code: 'PENDING' }
+    });
+
+    if (!pendingStatus) {
+      return {
+        canTransition: false,
+        reason: 'Pending status not found'
+      };
+    }
+
+    // Check if Accounts clearance already exists
+    const existingAccountsClearance = application.clearances.find(
+      clearance => clearance.section.code === 'ACCOUNTS'
+    );
+
+    if (!existingAccountsClearance) {
+      // Create pending Accounts clearance
+      await prisma.clearance.create({
+        data: {
+          applicationId: context.applicationId,
+          sectionId: accountsSection.id,
+          statusId: pendingStatus.id,
+          remarks: 'Awaiting accounts processing and payment verification',
+          clearedAt: null
+        }
+      });
+
+      logger.info(`Created pending Accounts clearance for application ${context.applicationId}`);
+    } else if (existingAccountsClearance.status.code !== 'PENDING') {
+      // Update existing clearance to PENDING if it's not already
+      await prisma.clearance.update({
+        where: { id: existingAccountsClearance.id },
+        data: {
+          statusId: pendingStatus.id,
+          remarks: 'Awaiting accounts processing and payment verification',
+          clearedAt: null,
+          updatedAt: new Date()
+        }
+      });
+
+      logger.info(`Updated Accounts clearance to PENDING for application ${context.applicationId}`);
+    }
+
+    return {
+      canTransition: true,
+      reason: 'Application sent to Accounts - pending clearance created',
+      metadata: {
+        accountsSectionId: accountsSection.id,
+        pendingStatusId: pendingStatus.id
+      }
+    };
+  } catch (error) {
+    logger.error('Error in GUARD_SENT_TO_ACCOUNTS:', error);
+    return {
+      canTransition: false,
+      reason: 'Error creating accounts clearance'
     };
   }
 };
@@ -899,12 +1199,216 @@ export const GUARD_DEED_FINALIZED: GuardFunction = async (context: GuardContext)
 };
 
 /**
+ * GUARD_SET_PENDING_PAYMENT - Set accounts status to AWAITING_PAYMENT
+ */
+const GUARD_SET_PENDING_PAYMENT: GuardFunction = async (context: GuardContext): Promise<GuardResult> => {
+  logger.info(`Executing GUARD_SET_PENDING_PAYMENT for application ${context.applicationId}`);
+
+  try {
+    // Update accounts breakdown status
+    await prisma.accountsBreakdown.update({
+      where: { applicationId: context.applicationId },
+      data: {
+        accountsStatus: 'AWAITING_PAYMENT',
+        updatedAt: new Date()
+      }
+    });
+
+    // Create audit log
+    await prisma.auditLog.create({
+      data: {
+        applicationId: context.applicationId,
+        userId: context.userId,
+        action: 'ACCOUNTS_SET_PENDING_PAYMENT',
+        details: 'Accounts status set to Awaiting Payment',
+        ipAddress: undefined,
+        userAgent: undefined
+      }
+    });
+
+    logger.info(`Set accounts status to AWAITING_PAYMENT for application ${context.applicationId}`);
+
+    return {
+      canTransition: true,
+      reason: 'Accounts status set to Awaiting Payment',
+      metadata: {
+        accountsStatus: 'AWAITING_PAYMENT'
+      }
+    };
+  } catch (error) {
+    logger.error(`Error in GUARD_SET_PENDING_PAYMENT for application ${context.applicationId}:`, error);
+    return {
+      canTransition: false,
+      reason: `Failed to set pending payment status: ${error instanceof Error ? error.message : 'Unknown error'}`
+    };
+  }
+};
+
+/**
+ * GUARD_RAISE_ACCOUNTS_OBJECTION - Raise objection and set status to ON_HOLD
+ */
+const GUARD_RAISE_ACCOUNTS_OBJECTION: GuardFunction = async (context: GuardContext): Promise<GuardResult> => {
+  logger.info(`Executing GUARD_RAISE_ACCOUNTS_OBJECTION for application ${context.applicationId}`);
+
+  const objectionReason = context.additionalData?.objectionReason as string;
+
+  if (!objectionReason || objectionReason.trim().length === 0) {
+    return {
+      canTransition: false,
+      reason: 'Objection reason is required'
+    };
+  }
+
+  try {
+    // Update accounts breakdown with objection details
+    await prisma.accountsBreakdown.update({
+      where: { applicationId: context.applicationId },
+      data: {
+        accountsStatus: 'ON_HOLD',
+        objectionReason: objectionReason.trim(),
+        objectionDate: new Date(),
+        resolvedDate: null,
+        updatedAt: new Date()
+      }
+    });
+
+    // Create audit log
+    await prisma.auditLog.create({
+      data: {
+        applicationId: context.applicationId,
+        userId: context.userId,
+        action: 'ACCOUNTS_OBJECTION_RAISED',
+        details: `Accounts objection raised: ${objectionReason.trim()}`,
+        ipAddress: undefined,
+        userAgent: undefined
+      }
+    });
+
+    logger.info(`Raised accounts objection for application ${context.applicationId}: ${objectionReason}`);
+
+    return {
+      canTransition: true,
+      reason: 'Accounts objection raised successfully',
+      metadata: {
+        accountsStatus: 'ON_HOLD',
+        objectionReason: objectionReason.trim()
+      }
+    };
+  } catch (error) {
+    logger.error(`Error in GUARD_RAISE_ACCOUNTS_OBJECTION for application ${context.applicationId}:`, error);
+    return {
+      canTransition: false,
+      reason: `Failed to raise accounts objection: ${error instanceof Error ? error.message : 'Unknown error'}`
+    };
+  }
+};
+
+/**
+ * GUARD_ACCOUNTS_OBJECTION_RESOLVED - Resolve accounts objection
+ */
+const GUARD_ACCOUNTS_OBJECTION_RESOLVED: GuardFunction = async (context: GuardContext): Promise<GuardResult> => {
+  logger.info(`Executing GUARD_ACCOUNTS_OBJECTION_RESOLVED for application ${context.applicationId}`);
+
+  try {
+    // Update accounts breakdown to resolve objection
+    await prisma.accountsBreakdown.update({
+      where: { applicationId: context.applicationId },
+      data: {
+        accountsStatus: 'PENDING',
+        resolvedDate: new Date(),
+        updatedAt: new Date()
+      }
+    });
+
+    // Create audit log
+    await prisma.auditLog.create({
+      data: {
+        applicationId: context.applicationId,
+        userId: context.userId,
+        action: 'ACCOUNTS_OBJECTION_RESOLVED',
+        details: 'Accounts objection resolved - returned to pending status',
+        ipAddress: undefined,
+        userAgent: undefined
+      }
+    });
+
+    logger.info(`Resolved accounts objection for application ${context.applicationId}`);
+
+    return {
+      canTransition: true,
+      reason: 'Accounts objection resolved successfully',
+      metadata: {
+        accountsStatus: 'PENDING'
+      }
+    };
+  } catch (error) {
+    logger.error(`Error in GUARD_ACCOUNTS_OBJECTION_RESOLVED for application ${context.applicationId}:`, error);
+    return {
+      canTransition: false,
+      reason: `Failed to resolve accounts objection: ${error instanceof Error ? error.message : 'Unknown error'}`
+    };
+  }
+};
+
+/**
+ * GUARD_ACCOUNTS_REVIEWED: Check if accounts have been reviewed by OWO
+ */
+export const GUARD_ACCOUNTS_REVIEWED: GuardFunction = async (context: GuardContext): Promise<GuardResult> => {
+  try {
+    const application = await prisma.application.findUnique({
+      where: { id: context.applicationId },
+      include: {
+        reviews: {
+          include: {
+            section: true
+          }
+        }
+      }
+    });
+
+    if (!application) {
+      return {
+        canTransition: false,
+        reason: 'Application not found'
+      };
+    }
+
+    // Check if ACCOUNTS review exists
+    const accountsReview = application.reviews.find(
+      review => review.section.code === 'ACCOUNTS'
+    );
+
+    if (!accountsReview) {
+      return {
+        canTransition: false,
+        reason: 'Accounts review not found'
+      };
+    }
+
+    return {
+      canTransition: true,
+      reason: 'Accounts reviewed',
+      metadata: {
+        reviewId: accountsReview.id
+      }
+    };
+  } catch (error) {
+    logger.error('GUARD_ACCOUNTS_REVIEWED error:', error);
+    return {
+      canTransition: false,
+      reason: 'Error checking accounts review'
+    };
+  }
+};
+
+/**
  * GUARDS map - Central registry of all workflow guards
  */
 export const GUARDS: Record<string, GuardFunction> = {
   GUARD_INTAKE_COMPLETE,
   GUARD_SCRUTINY_COMPLETE,
   GUARD_SENT_TO_BCA_HOUSING,
+  GUARD_SENT_TO_ACCOUNTS,
   GUARD_BCA_CLEAR,
   GUARD_BCA_OBJECTION,
   GUARD_HOUSING_CLEAR,
@@ -912,8 +1416,15 @@ export const GUARDS: Record<string, GuardFunction> = {
   GUARD_CLEARANCES_COMPLETE,
   GUARD_BCA_RESOLVED,
   GUARD_HOUSING_RESOLVED,
+  GUARD_BCA_HOUSING_REVIEW,
+  GUARD_OWO_REVIEW_COMPLETE,
   GUARD_ACCOUNTS_CALCULATED,
+  GUARD_SET_PENDING_PAYMENT,
+  GUARD_RAISE_ACCOUNTS_OBJECTION,
+  GUARD_ACCOUNTS_OBJECTION_RESOLVED,
   GUARD_PAYMENT_VERIFIED,
+  GUARD_ACCOUNTS_CLEAR,
+  GUARD_ACCOUNTS_REVIEWED,
   GUARD_APPROVAL_COMPLETE,
   GUARD_APPROVAL_REJECTED,
   GUARD_DEED_FINALIZED
@@ -978,6 +1489,8 @@ export const getGuardDescription = (guardName: string): string => {
     'GUARD_CLEARANCES_COMPLETE': 'Check if both BCA and Housing clearances are obtained',
     'GUARD_BCA_RESOLVED': 'Check if BCA objection has been resolved',
     'GUARD_HOUSING_RESOLVED': 'Check if Housing objection has been resolved',
+    'GUARD_BCA_HOUSING_REVIEW': 'Check if BCA and Housing clearances are ready for OWO review',
+    'GUARD_OWO_REVIEW_COMPLETE': 'Check if OWO review for BCA/Housing is complete',
     'GUARD_ACCOUNTS_CALCULATED': 'Check if accounts breakdown has been calculated',
     'GUARD_PAYMENT_VERIFIED': 'Check if payment has been verified',
     'GUARD_APPROVAL_COMPLETE': 'Check if approval has been completed',
