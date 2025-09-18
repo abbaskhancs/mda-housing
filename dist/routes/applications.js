@@ -52,6 +52,7 @@ const accountsService_1 = require("../services/accountsService");
 const reviewService_1 = require("../services/reviewService");
 const deedService_1 = require("../services/deedService");
 const pdfService_1 = require("../services/pdfService");
+const packetService_1 = require("../services/packetService");
 const router = (0, express_1.Router)();
 const prisma = new client_1.PrismaClient();
 // Allowed document types
@@ -79,7 +80,7 @@ const validateDocType = (docType) => {
  * Create new application with attachments and receipt generation
  */
 router.post('/', auth_1.authenticateToken, (0, upload_1.uploadMultiple)('attachments', 20), (0, validation_1.validate)(validation_2.applicationSchemas.create), (0, errorHandler_1.asyncHandler)(async (req, res) => {
-    const { sellerId, buyerId, attorneyId, plotId } = req.body;
+    const { sellerId, buyerId, attorneyId, plotId, waterNocRequired } = req.body;
     const files = req.files;
     // Use database transaction to ensure atomicity
     const result = await prisma.$transaction(async (tx) => {
@@ -120,7 +121,8 @@ router.post('/', auth_1.authenticateToken, (0, upload_1.uploadMultiple)('attachm
                 buyerId,
                 attorneyId,
                 plotId,
-                currentStageId: initialStage.id
+                currentStageId: initialStage.id,
+                waterNocRequired: waterNocRequired === 'true' || waterNocRequired === true
             },
             include: {
                 seller: true,
@@ -284,7 +286,11 @@ router.get('/:id', auth_1.authenticateToken, (0, validation_1.validateParams)(va
             seller: true,
             buyer: true,
             attorney: true,
-            plot: true,
+            plot: {
+                include: {
+                    currentOwner: true
+                }
+            },
             currentStage: true,
             previousStage: true,
             attachments: true,
@@ -328,15 +334,85 @@ router.get('/:id', auth_1.authenticateToken, (0, validation_1.validateParams)(va
     });
 }));
 /**
+ * GET /api/applications/search
+ * Global search across applications by App No, Plot, CNIC
+ */
+router.get('/search', auth_1.authenticateToken, (0, errorHandler_1.asyncHandler)(async (req, res) => {
+    const { q, limit = '10' } = req.query;
+    if (!q || typeof q !== 'string' || q.trim().length < 2) {
+        return res.json({
+            applications: [],
+            message: 'Search query must be at least 2 characters'
+        });
+    }
+    const searchTerm = q.trim();
+    const limitNum = parseInt(limit) || 10;
+    // Search across application number, plot number, seller CNIC, buyer CNIC, attorney CNIC
+    const applications = await prisma.application.findMany({
+        where: {
+            OR: [
+                {
+                    applicationNumber: {
+                        contains: searchTerm
+                    }
+                },
+                {
+                    plot: {
+                        plotNumber: {
+                            contains: searchTerm
+                        }
+                    }
+                },
+                {
+                    seller: {
+                        cnic: {
+                            contains: searchTerm
+                        }
+                    }
+                },
+                {
+                    buyer: {
+                        cnic: {
+                            contains: searchTerm
+                        }
+                    }
+                },
+                {
+                    attorney: {
+                        cnic: {
+                            contains: searchTerm
+                        }
+                    }
+                }
+            ]
+        },
+        include: {
+            seller: true,
+            buyer: true,
+            attorney: true,
+            plot: true,
+            currentStage: true
+        },
+        take: limitNum,
+        orderBy: { createdAt: 'desc' }
+    });
+    res.json({
+        applications,
+        searchTerm,
+        total: applications.length
+    });
+}));
+/**
  * GET /api/applications
  * Get applications with pagination and filtering
  */
 router.get('/', auth_1.authenticateToken, (0, errorHandler_1.asyncHandler)(async (req, res) => {
-    const { page = '1', limit = '10', stage, status } = req.query;
+    const { page = '1', limit = '10', stage, stages, status, search, assignedToMe, includeDetails } = req.query;
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 10;
     const skip = (pageNum - 1) * limitNum;
     const where = {};
+    // Handle single stage
     if (stage) {
         const stageRecord = await prisma.wfStage.findFirst({
             where: { code: stage }
@@ -345,28 +421,150 @@ router.get('/', auth_1.authenticateToken, (0, errorHandler_1.asyncHandler)(async
             where.currentStageId = stageRecord.id;
         }
     }
+    // Handle multiple stages
+    if (stages) {
+        const stageArray = Array.isArray(stages) ? stages : [stages];
+        const stageRecords = await prisma.wfStage.findMany({
+            where: { code: { in: stageArray } }
+        });
+        if (stageRecords.length > 0) {
+            where.currentStageId = { in: stageRecords.map(s => s.id) };
+        }
+    }
     if (status) {
         where.status = status;
+    }
+    // Search functionality
+    if (search && typeof search === 'string' && search.trim().length > 0) {
+        const searchTerm = search.trim();
+        where.OR = [
+            {
+                applicationNumber: {
+                    contains: searchTerm
+                }
+            },
+            {
+                plot: {
+                    plotNumber: {
+                        contains: searchTerm
+                    }
+                }
+            },
+            {
+                seller: {
+                    OR: [
+                        {
+                            cnic: {
+                                contains: searchTerm
+                            }
+                        },
+                        {
+                            name: {
+                                contains: searchTerm
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                buyer: {
+                    OR: [
+                        {
+                            cnic: {
+                                contains: searchTerm
+                            }
+                        },
+                        {
+                            name: {
+                                contains: searchTerm
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                attorney: {
+                    OR: [
+                        {
+                            cnic: {
+                                contains: searchTerm
+                            }
+                        },
+                        {
+                            name: {
+                                contains: searchTerm
+                            }
+                        }
+                    ]
+                }
+            }
+        ];
+    }
+    // "My pending" filter - applications assigned to current user's role
+    if (assignedToMe === 'true' && req.user) {
+        const userRole = req.user.role;
+        const roleStageMap = {
+            'BCA': ['SENT_TO_BCA_HOUSING'],
+            'HOUSING': ['SENT_TO_BCA_HOUSING'],
+            'ACCOUNTS': ['SENT_TO_ACCOUNTS'],
+            'APPROVER': ['APPROVED'],
+            'OWO': ['BCA_HOUSING_CLEAR', 'ACCOUNTS_CLEAR']
+        };
+        if (roleStageMap[userRole]) {
+            const relevantStages = await prisma.wfStage.findMany({
+                where: {
+                    code: {
+                        in: roleStageMap[userRole]
+                    }
+                }
+            });
+            if (relevantStages.length > 0) {
+                where.currentStageId = {
+                    in: relevantStages.map(stage => stage.id)
+                };
+            }
+        }
+    }
+    // Build include object based on includeDetails flag
+    const includeObj = {
+        seller: true,
+        buyer: true,
+        attorney: true,
+        plot: {
+            include: {
+                currentOwner: true
+            }
+        },
+        currentStage: true,
+        attachments: true,
+        clearances: {
+            include: {
+                section: true,
+                status: true
+            }
+        }
+    };
+    // Add more details if requested
+    if (includeDetails === 'true') {
+        includeObj.accountsBreakdown = true;
+        includeObj.reviews = {
+            include: {
+                section: true
+            }
+        };
+        includeObj.transferDeed = {
+            include: {
+                witness1: true,
+                witness2: true
+            }
+        };
     }
     const [applications, total] = await Promise.all([
         prisma.application.findMany({
             where,
             skip,
             take: limitNum,
-            include: {
-                seller: true,
-                buyer: true,
-                attorney: true,
-                plot: true,
-                currentStage: true,
-                attachments: true,
-                clearances: {
-                    include: {
-                        section: true,
-                        status: true
-                    }
-                }
-            },
+            include: includeObj,
             orderBy: { createdAt: 'desc' }
         }),
         prisma.application.count({ where })
@@ -1804,5 +2002,105 @@ router.post('/:id/accounts/raise-objection', auth_1.authenticateToken, (0, valid
         application: transitionResult.application,
         accountsBreakdown: transitionResult.application?.accountsBreakdown
     });
+}));
+/**
+ * GET /api/applications/registers/export-pdf
+ * Export applications register as PDF
+ */
+router.get('/registers/export-pdf', auth_1.authenticateToken, (0, errorHandler_1.asyncHandler)(async (req, res) => {
+    const { stage, section, search, dateFrom, dateTo } = req.query;
+    // Build where clause for filtering
+    const where = {};
+    if (stage) {
+        where.currentStage = { code: stage };
+    }
+    if (section) {
+        where.clearances = {
+            some: {
+                section: { code: section }
+            }
+        };
+    }
+    if (search) {
+        where.OR = [
+            { applicationNumber: { contains: search, mode: 'insensitive' } },
+            { plot: { plotNumber: { contains: search, mode: 'insensitive' } } },
+            { seller: { cnic: { contains: search, mode: 'insensitive' } } },
+            { buyer: { cnic: { contains: search, mode: 'insensitive' } } }
+        ];
+    }
+    if (dateFrom || dateTo) {
+        where.createdAt = {};
+        if (dateFrom)
+            where.createdAt.gte = new Date(dateFrom);
+        if (dateTo)
+            where.createdAt.lte = new Date(dateTo);
+    }
+    // Fetch applications with plot owner information
+    const applications = await prisma.application.findMany({
+        where,
+        include: {
+            seller: true,
+            buyer: true,
+            attorney: true,
+            plot: {
+                include: {
+                    currentOwner: true
+                }
+            },
+            currentStage: true
+        },
+        orderBy: { createdAt: 'desc' }
+    });
+    // Generate PDF using the PDF service
+    const { PDFService } = await Promise.resolve().then(() => __importStar(require('../services/pdfService')));
+    const pdfService = new PDFService();
+    await pdfService.initialize();
+    const pdfBuffer = await pdfService.generatePDF('registers/applications-register.hbs', {
+        applications,
+        generatedAt: new Date(),
+        filters: {
+            stage: stage || 'All',
+            section: section || 'All',
+            search: search || '',
+            dateFrom: dateFrom || '',
+            dateTo: dateTo || ''
+        }
+    });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="applications_register_${new Date().toISOString().split('T')[0]}.pdf"`);
+    res.send(pdfBuffer);
+    logger_1.logger.info(`Applications register PDF exported by user ${req.user.username}`);
+}));
+/**
+ * Export case packet as zip file containing all documents
+ */
+router.get('/:id/packet', auth_1.authenticateToken, (0, validation_1.validateParams)(validation_2.commonSchemas.idParam), (0, errorHandler_1.asyncHandler)(async (req, res) => {
+    const { id } = req.params;
+    // Verify application exists
+    const application = await prisma.application.findUnique({
+        where: { id },
+        select: { id: true, applicationNumber: true }
+    });
+    if (!application) {
+        throw (0, errorHandler_1.createError)('Application not found', 404, 'APPLICATION_NOT_FOUND');
+    }
+    logger_1.logger.info(`Generating case packet for application ${id} by user ${req.user.username}`);
+    try {
+        // Generate the packet zip
+        const zipBuffer = await packetService_1.packetService.createPacketZip(id);
+        const filename = packetService_1.packetService.getPacketFilename(application.applicationNumber || id);
+        // Set response headers for zip download
+        res.setHeader('Content-Type', 'application/zip');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.setHeader('Content-Length', zipBuffer.length.toString());
+        logger_1.logger.info(`Case packet generated successfully for application ${id}, size: ${zipBuffer.length} bytes`);
+        // Send the zip file
+        res.send(zipBuffer);
+    }
+    catch (error) {
+        logger_1.logger.error(`Failed to generate case packet for application ${id}:`, error);
+        throw (0, errorHandler_1.createError)('Failed to generate case packet', 500, 'PACKET_GENERATION_FAILED');
+    }
 }));
 exports.default = router;

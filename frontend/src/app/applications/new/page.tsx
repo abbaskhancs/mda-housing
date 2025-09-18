@@ -14,7 +14,7 @@ type FormValues = {
   sellerAddress: string;
   sellerPhone: string;
   sellerEmail: string;
-  
+
   // Buyer information
   buyerName: string;
   buyerCnic: string;
@@ -22,7 +22,7 @@ type FormValues = {
   buyerAddress: string;
   buyerPhone: string;
   buyerEmail: string;
-  
+
   // Attorney information (optional)
   attorneyName?: string;
   attorneyCnic?: string;
@@ -30,13 +30,16 @@ type FormValues = {
   attorneyAddress?: string;
   attorneyPhone?: string;
   attorneyEmail?: string;
-  
+
   // Plot information
   plotNumber: string;
   blockNumber: string;
   sectorNumber: string;
   plotArea: string;
   plotLocation: string;
+
+  // Water NOC requirement
+  waterNocRequired: boolean;
 };
 
 type AttachmentRow = {
@@ -70,7 +73,8 @@ export default function NewApplicationPage() {
       sellerName: "", sellerCnic: "", sellerFatherName: "", sellerAddress: "", sellerPhone: "", sellerEmail: "",
       buyerName: "", buyerCnic: "", buyerFatherName: "", buyerAddress: "", buyerPhone: "", buyerEmail: "",
       attorneyName: "", attorneyCnic: "", attorneyFatherName: "", attorneyAddress: "", attorneyPhone: "", attorneyEmail: "",
-      plotNumber: "", blockNumber: "", sectorNumber: "", plotArea: "", plotLocation: ""
+      plotNumber: "", blockNumber: "", sectorNumber: "", plotArea: "", plotLocation: "",
+      waterNocRequired: false
     }
   });
   const [attachments, setAttachments] = React.useState<AttachmentRow[]>([
@@ -203,7 +207,8 @@ export default function NewApplicationPage() {
           sellerId: seller.person.id,
           buyerId: buyer.person.id,
           attorneyId: attorney?.person?.id,
-          plotId: plot.plot.id
+          plotId: plot.plot.id,
+          waterNocRequired: data.waterNocRequired
         })
       });
 
@@ -399,6 +404,26 @@ export default function NewApplicationPage() {
                 {errors.plotLocation && <span style={{ color: "#c00" }}>Required</span>}
               </div>
             </div>
+          </div>
+
+          {/* Water NOC Requirement */}
+          <div style={{ marginBottom: 24, padding: 16, border: "1px solid #ddd", borderRadius: 8, backgroundColor: "#f8f9fa" }}>
+            <h3 style={{ marginBottom: 16, color: "#333" }}>Water NOC Requirement / واٹر NOC کی ضرورت</h3>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <input
+                type="checkbox"
+                {...register("waterNocRequired")}
+                id="waterNocRequired"
+                style={{ width: 18, height: 18 }}
+              />
+              <label htmlFor="waterNocRequired" style={{ fontSize: 16, cursor: "pointer" }}>
+                Water NOC required? / کیا واٹر NOC درکار ہے؟
+              </label>
+            </div>
+            <p style={{ marginTop: 8, fontSize: 14, color: "#666", fontStyle: "italic" }}>
+              Check this box if the property requires Water Department clearance /
+              اگر پراپرٹی کو واٹر ڈیپارٹمنٹ کلیئرنس کی ضرورت ہے تو یہ باکس چیک کریں
+            </p>
           </div>
 
           <div style={{ marginTop: 24 }}>

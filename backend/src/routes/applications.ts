@@ -17,6 +17,7 @@ import { upsertAccountsBreakdown, verifyPayment, getAccountsBreakdown, generateC
 import { createReview, updateReview, getReviewsByApplication, getReviewById, getReviewsBySection } from '../services/reviewService';
 import { createDeedDraft, finalizeDeed, getTransferDeed, updateDeedDraft } from '../services/deedService';
 import { PDFService } from '../services/pdfService';
+import { packetService } from '../services/packetService';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -48,7 +49,7 @@ const validateDocType = (docType: string): boolean => {
  * Create new application with attachments and receipt generation
  */
 router.post('/', authenticateToken, uploadMultiple('attachments', 20), validate(applicationSchemas.create), asyncHandler(async (req: Request, res: Response) => {
-  const { sellerId, buyerId, attorneyId, plotId } = req.body;
+  const { sellerId, buyerId, attorneyId, plotId, waterNocRequired } = req.body;
   const files = req.files as Express.Multer.File[];
 
   // Use database transaction to ensure atomicity
@@ -95,7 +96,8 @@ router.post('/', authenticateToken, uploadMultiple('attachments', 20), validate(
         buyerId,
         attorneyId,
         plotId,
-        currentStageId: initialStage.id
+        currentStageId: initialStage.id,
+        waterNocRequired: waterNocRequired === 'true' || waterNocRequired === true
       },
       include: {
         seller: true,
@@ -275,7 +277,11 @@ router.get('/:id', authenticateToken, validateParams(commonSchemas.idParam), asy
       seller: true,
       buyer: true,
       attorney: true,
-      plot: true,
+      plot: {
+        include: {
+          currentOwner: true
+        }
+      },
       currentStage: true,
       previousStage: true,
       attachments: true,
@@ -344,39 +350,34 @@ router.get('/search', authenticateToken, asyncHandler(async (req: Request, res: 
       OR: [
         {
           applicationNumber: {
-            contains: searchTerm,
-            mode: 'insensitive'
+            contains: searchTerm
           }
         },
         {
           plot: {
             plotNumber: {
-              contains: searchTerm,
-              mode: 'insensitive'
+              contains: searchTerm
             }
           }
         },
         {
           seller: {
             cnic: {
-              contains: searchTerm,
-              mode: 'insensitive'
+              contains: searchTerm
             }
           }
         },
         {
           buyer: {
             cnic: {
-              contains: searchTerm,
-              mode: 'insensitive'
+              contains: searchTerm
             }
           }
         },
         {
           attorney: {
             cnic: {
-              contains: searchTerm,
-              mode: 'insensitive'
+              contains: searchTerm
             }
           }
         }
@@ -405,20 +406,32 @@ router.get('/search', authenticateToken, asyncHandler(async (req: Request, res: 
  * Get applications with pagination and filtering
  */
 router.get('/', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
-  const { page = '1', limit = '10', stage, status, search, assignedToMe } = req.query;
-  
+  const { page = '1', limit = '10', stage, stages, status, search, assignedToMe, includeDetails } = req.query;
+
   const pageNum = parseInt(page as string) || 1;
   const limitNum = parseInt(limit as string) || 10;
   const skip = (pageNum - 1) * limitNum;
 
   const where: any = {};
 
+  // Handle single stage
   if (stage) {
     const stageRecord = await prisma.wfStage.findFirst({
       where: { code: stage as string }
     });
     if (stageRecord) {
       where.currentStageId = stageRecord.id;
+    }
+  }
+
+  // Handle multiple stages
+  if (stages) {
+    const stageArray = Array.isArray(stages) ? stages : [stages];
+    const stageRecords = await prisma.wfStage.findMany({
+      where: { code: { in: stageArray as string[] } }
+    });
+    if (stageRecords.length > 0) {
+      where.currentStageId = { in: stageRecords.map(s => s.id) };
     }
   }
 
@@ -432,15 +445,13 @@ router.get('/', authenticateToken, asyncHandler(async (req: Request, res: Respon
     where.OR = [
       {
         applicationNumber: {
-          contains: searchTerm,
-          mode: 'insensitive'
+          contains: searchTerm
         }
       },
       {
         plot: {
           plotNumber: {
-            contains: searchTerm,
-            mode: 'insensitive'
+            contains: searchTerm
           }
         }
       },
@@ -449,14 +460,12 @@ router.get('/', authenticateToken, asyncHandler(async (req: Request, res: Respon
           OR: [
             {
               cnic: {
-                contains: searchTerm,
-                mode: 'insensitive'
+                contains: searchTerm
               }
             },
             {
               name: {
-                contains: searchTerm,
-                mode: 'insensitive'
+                contains: searchTerm
               }
             }
           ]
@@ -467,14 +476,12 @@ router.get('/', authenticateToken, asyncHandler(async (req: Request, res: Respon
           OR: [
             {
               cnic: {
-                contains: searchTerm,
-                mode: 'insensitive'
+                contains: searchTerm
               }
             },
             {
               name: {
-                contains: searchTerm,
-                mode: 'insensitive'
+                contains: searchTerm
               }
             }
           ]
@@ -485,14 +492,12 @@ router.get('/', authenticateToken, asyncHandler(async (req: Request, res: Respon
           OR: [
             {
               cnic: {
-                contains: searchTerm,
-                mode: 'insensitive'
+                contains: searchTerm
               }
             },
             {
               name: {
-                contains: searchTerm,
-                mode: 'insensitive'
+                contains: searchTerm
               }
             }
           ]
@@ -529,25 +534,48 @@ router.get('/', authenticateToken, asyncHandler(async (req: Request, res: Respon
     }
   }
 
+  // Build include object based on includeDetails flag
+  const includeObj: any = {
+    seller: true,
+    buyer: true,
+    attorney: true,
+    plot: {
+      include: {
+        currentOwner: true
+      }
+    },
+    currentStage: true,
+    attachments: true,
+    clearances: {
+      include: {
+        section: true,
+        status: true
+      }
+    }
+  };
+
+  // Add more details if requested
+  if (includeDetails === 'true') {
+    includeObj.accountsBreakdown = true;
+    includeObj.reviews = {
+      include: {
+        section: true
+      }
+    };
+    includeObj.transferDeed = {
+      include: {
+        witness1: true,
+        witness2: true
+      }
+    };
+  }
+
   const [applications, total] = await Promise.all([
     prisma.application.findMany({
       where,
       skip,
       take: limitNum,
-      include: {
-        seller: true,
-        buyer: true,
-        attorney: true,
-        plot: true,
-        currentStage: true,
-        attachments: true,
-        clearances: {
-          include: {
-            section: true,
-            status: true
-          }
-        }
-      },
+      include: includeObj,
       orderBy: { createdAt: 'desc' }
     }),
     prisma.application.count({ where })
@@ -2291,6 +2319,123 @@ router.post('/:id/accounts/raise-objection', authenticateToken, validateParams(c
     application: transitionResult.application,
     accountsBreakdown: transitionResult.application?.accountsBreakdown
   });
+}));
+
+/**
+ * GET /api/applications/registers/export-pdf
+ * Export applications register as PDF
+ */
+router.get('/registers/export-pdf', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+  const { stage, section, search, dateFrom, dateTo } = req.query;
+
+  // Build where clause for filtering
+  const where: any = {};
+
+  if (stage) {
+    where.currentStage = { code: stage };
+  }
+
+  if (section) {
+    where.clearances = {
+      some: {
+        section: { code: section }
+      }
+    };
+  }
+
+  if (search) {
+    where.OR = [
+      { applicationNumber: { contains: search as string, mode: 'insensitive' } },
+      { plot: { plotNumber: { contains: search as string, mode: 'insensitive' } } },
+      { seller: { cnic: { contains: search as string, mode: 'insensitive' } } },
+      { buyer: { cnic: { contains: search as string, mode: 'insensitive' } } }
+    ];
+  }
+
+  if (dateFrom || dateTo) {
+    where.createdAt = {};
+    if (dateFrom) where.createdAt.gte = new Date(dateFrom as string);
+    if (dateTo) where.createdAt.lte = new Date(dateTo as string);
+  }
+
+  // Fetch applications with plot owner information
+  const applications = await prisma.application.findMany({
+    where,
+    include: {
+      seller: true,
+      buyer: true,
+      attorney: true,
+      plot: {
+        include: {
+          currentOwner: true
+        }
+      },
+      currentStage: true
+    },
+    orderBy: { createdAt: 'desc' }
+  });
+
+  // Generate PDF using the PDF service
+  const { PDFService } = await import('../services/pdfService');
+  const pdfService = new PDFService();
+  await pdfService.initialize();
+
+  const pdfBuffer = await pdfService.generatePDF('registers/applications-register.hbs', {
+    applications,
+    generatedAt: new Date(),
+    filters: {
+      stage: stage || 'All',
+      section: section || 'All',
+      search: search || '',
+      dateFrom: dateFrom || '',
+      dateTo: dateTo || ''
+    }
+  });
+
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="applications_register_${new Date().toISOString().split('T')[0]}.pdf"`);
+  res.send(pdfBuffer);
+
+  logger.info(`Applications register PDF exported by user ${req.user!.username}`);
+}));
+
+/**
+ * Export case packet as zip file containing all documents
+ */
+router.get('/:id/packet', authenticateToken, validateParams(commonSchemas.idParam), asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  // Verify application exists
+  const application = await prisma.application.findUnique({
+    where: { id },
+    select: { id: true, applicationNumber: true }
+  });
+
+  if (!application) {
+    throw createError('Application not found', 404, 'APPLICATION_NOT_FOUND');
+  }
+
+  logger.info(`Generating case packet for application ${id} by user ${req.user!.username}`);
+
+  try {
+    // Generate the packet zip
+    const zipBuffer = await packetService.createPacketZip(id);
+    const filename = packetService.getPacketFilename(application.applicationNumber || id);
+
+    // Set response headers for zip download
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', zipBuffer.length.toString());
+
+    logger.info(`Case packet generated successfully for application ${id}, size: ${zipBuffer.length} bytes`);
+
+    // Send the zip file
+    res.send(zipBuffer);
+
+  } catch (error) {
+    logger.error(`Failed to generate case packet for application ${id}:`, error);
+    throw createError('Failed to generate case packet', 500, 'PACKET_GENERATION_FAILED');
+  }
 }));
 
 export default router;

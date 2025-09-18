@@ -599,40 +599,76 @@ Milestone 4.2: ✅ Full flow click‑through in UI moves stages correctly. (Comp
 
 ---
 
-#### 22) Optional WATER section path
+#### 22) Optional WATER section path ✅ **COMPLETED**
 
-* Implement: Toggle at intake (**Water NOC required?**). If yes, show WATER clearance row and console like BCA.
-* **Test & Validate**
+* ✅ Implement: Toggle at intake (**Water NOC required?**). If yes, show WATER clearance row and console like BCA.
+* ✅ **Test & Validate**
 
-  * With Water enabled, **ALL\_SECTIONS\_IN\_GROUP\_CLEAR(BCA\_HOUSING)** must consider only BCA+HOUSING (Water independent); WATER objections do not block Accounts unless policy dictates (skip policy; just show independent row).
-  * WATER PDF opens.
-
----
-
-#### 23) Amount-in-words helper parity
-
-* Implement: Same number → same words in **UI and challan PDF**. Centralize in a shared helper.
-* **Test & Validate**
-
-  * Change total; confirm both places show identical wording after rerender.
+  * ✅ With Water enabled, **ALL\_SECTIONS\_IN\_GROUP\_CLEAR(BCA\_HOUSING)** must consider only BCA+HOUSING (Water independent); WATER objections do not block Accounts unless policy dictates (skip policy; just show independent row).
+  * ✅ WATER PDF opens.
 
 ---
 
-#### 24) Registers (read-only) parity
+#### 23) Amount-in-words helper parity ✅
 
-* Implement: Registers list shows **current owner** from Plot; export CSV/PDF.
-* **Test & Validate**
+* ✅ Implement: Same number → same words in **UI and challan PDF**. Centralize in a shared helper.
+* ✅ **Test & Validate**
 
-  * After approval, the plot record shows transferee as owner; export contains updated owner.
+  * ✅ Change total; confirm both places show identical wording after rerender.
+
+**Implementation Notes:**
+- ✅ **Centralized Utility**: Created shared `numberToWords.ts` utility in both backend and frontend with identical implementations
+- ✅ **Backend Integration**: `accountsService.ts` uses `formatCurrencyInWords()` to generate `totalAmountWords` stored in database
+- ✅ **PDF Templates**: Challan template uses `{{accountsBreakdown.totalAmountWords}}` from database (consistent with backend utility)
+- ✅ **Frontend UI**: `AccountsTab.tsx` component uses frontend utility for live calculations and displays
+- ✅ **API Integration**: Frontend `api.ts` service includes accounts methods for CRUD operations
+- ✅ **Validation Fix**: Updated `accountsSchemas` to use `nonNegativeDecimalSchema` allowing zero values
+- ✅ **Comprehensive Testing**: All test scenarios pass - same number produces identical words in UI and PDF
+- ✅ **Live Calculation**: UI shows real-time amount-in-words that matches what will be stored/displayed in PDF
+- ✅ **Rerender Consistency**: Changing totals maintains identical wording between UI and PDF templates
 
 ---
 
-#### 25) Packet export (zip)
+#### 24) Registers (read-only) parity ✅
 
-* Implement: **Export Case Packet** button (any tab) hits `/api/applications/:id/packet` to download zip of Docs #1–#5.
-* **Test & Validate**
+* ✅ Implement: Registers list shows **current owner** from Plot; export CSV/PDF.
+* ✅ **Test & Validate**
 
-  * Zip downloads; opening shows intake receipt, clearances, challan, memo, deed.
+  * ✅ After approval, the plot record shows transferee as owner; export contains updated owner.
+
+**COMPLETED**:
+- ✅ Backend: Updated applications API to include plot's currentOwner information in responses
+- ✅ Backend: Added PDF export endpoint `/api/applications/registers/export-pdf` for registers
+- ✅ Backend: Created comprehensive PDF template for applications register with current owner display
+- ✅ Backend: Enhanced Handlebars helpers with string manipulation and array counting functions
+- ✅ Frontend: Updated Application interface to include currentOwner in plot data
+- ✅ Frontend: Added current owner column to registers table display
+- ✅ Frontend: Updated CSV export to include current owner name and CNIC
+- ✅ Frontend: Added PDF export functionality with proper error handling
+- ✅ Frontend: Enhanced registers page with both CSV and PDF export buttons
+- ✅ Database: Plot model already includes currentOwnerId field and currentOwner relation
+- ✅ Ownership Transfer: Existing deed finalization process updates plot ownership correctly
+
+---
+
+#### 25) Packet export (zip) ✅
+
+* ✅ Implement: **Export Case Packet** button (any tab) hits `/api/applications/:id/packet` to download zip of Docs #1–#5.
+* ✅ **Test & Validate**
+
+  * ✅ Zip downloads; opening shows intake receipt, clearances, challan, memo, deed.
+
+**COMPLETED**:
+- ✅ Backend: Created PacketService to generate all required documents (intake receipt, clearances, challan, memo, deed)
+- ✅ Backend: Added archiver dependency for zip file creation
+- ✅ Backend: Implemented `/api/applications/:id/packet` endpoint with authentication and validation
+- ✅ Backend: Zip contains all 7 documents with proper naming (01_Intake_Receipt.pdf, 02_BCA_Clearance.pdf, etc.)
+- ✅ Backend: Proper error handling and logging for packet generation
+- ✅ Frontend: Added exportCasePacket method to API service
+- ✅ Frontend: Updated application detail page Export button to download case packet zip
+- ✅ Frontend: Added loading state and error handling for packet export
+- ✅ Frontend: Proper file download with dynamic filename based on application number and date
+- ✅ Integration: End-to-end functionality from UI button click to zip file download
 
 ---
 

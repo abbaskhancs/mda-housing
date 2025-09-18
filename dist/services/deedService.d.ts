@@ -68,6 +68,7 @@ export declare const getTransferDeed: (applicationId: string) => Promise<({
         buyerId: string;
         attorneyId: string | null;
         plotId: string;
+        waterNocRequired: boolean;
         applicationNumber: string;
         currentStageId: string;
         previousStageId: string | null;

@@ -66,16 +66,17 @@ export interface Application {
     plotNumber: string;
     sector: string;
     size: string;
+    currentOwner?: {
+      id: string;
+      name: string;
+      cnic: string;
+    };
   };
   createdAt: string;
   updatedAt: string;
 }
 
-export interface GuardResult {
-  canTransition: boolean;
-  reason: string;
-  metadata?: any;
-}
+
 
 class ApiService {
   private getAuthHeaders(): HeadersInit {
@@ -111,12 +112,27 @@ class ApiService {
     }
   }
 
-  async get<T>(endpoint: string): Promise<ApiResponse<T>> {
+  async get<T>(endpoint: string, params?: any, responseType: 'json' | 'blob' = 'json'): Promise<ApiResponse<T>> {
     try {
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: 'GET',
         headers: this.getAuthHeaders()
       });
+
+      if (responseType === 'blob') {
+        if (!response.ok) {
+          return {
+            success: false,
+            error: `HTTP ${response.status}`
+          };
+        }
+        const blob = await response.blob();
+        return {
+          success: true,
+          data: blob as T
+        };
+      }
+
       return this.handleResponse<T>(response);
     } catch (error) {
       return {
@@ -173,6 +189,10 @@ class ApiService {
     }
   }
 
+  async request<T>(endpoint: string): Promise<ApiResponse<T>> {
+    return this.get<T>(`/api${endpoint}`);
+  }
+
   // Workflow-specific methods
   async getWorkflowStages(): Promise<ApiResponse<{ stages: Array<{ id: string; code: string; name: string; sortOrder: number }> }>> {
     return this.request('/workflow/stages');
@@ -220,6 +240,7 @@ class ApiService {
   // Application methods
   async getApplications(params?: {
     stage?: string;
+    stages?: string[];
     section?: string;
     limit?: number;
     offset?: number;
@@ -227,9 +248,13 @@ class ApiService {
     dateFrom?: string;
     dateTo?: string;
     assignedToMe?: boolean;
+    includeDetails?: boolean;
   }): Promise<ApiResponse<{ applications: Application[]; total: number }>> {
     const queryParams = new URLSearchParams();
     if (params?.stage) queryParams.append('stage', params.stage);
+    if (params?.stages) {
+      params.stages.forEach(stage => queryParams.append('stages', stage));
+    }
     if (params?.section) queryParams.append('section', params.section);
     if (params?.limit) queryParams.append('limit', params.limit.toString());
     if (params?.offset) queryParams.append('offset', params.offset.toString());
@@ -237,6 +262,7 @@ class ApiService {
     if (params?.dateFrom) queryParams.append('dateFrom', params.dateFrom);
     if (params?.dateTo) queryParams.append('dateTo', params.dateTo);
     if (params?.assignedToMe) queryParams.append('assignedToMe', 'true');
+    if (params?.includeDetails) queryParams.append('includeDetails', 'true');
 
     const queryString = queryParams.toString();
     return this.get<{ applications: Application[]; total: number }>(`/api/applications${queryString ? `?${queryString}` : ''}`);
@@ -280,6 +306,22 @@ class ApiService {
   }
 
   // Accounts methods
+  async getAccountsBreakdown(applicationId: string): Promise<ApiResponse<any>> {
+    return this.get(`/api/applications/${applicationId}/accounts`);
+  }
+
+  async updateAccountsBreakdown(applicationId: string, feeHeads: any): Promise<ApiResponse<any>> {
+    return this.post(`/api/applications/${applicationId}/accounts`, feeHeads);
+  }
+
+  async generateChallan(applicationId: string): Promise<ApiResponse<any>> {
+    return this.post(`/api/applications/${applicationId}/accounts/generate-challan`, {});
+  }
+
+  async downloadChallan(applicationId: string): Promise<ApiResponse<any>> {
+    return this.get(`/api/applications/${applicationId}/accounts/challan-pdf`, {}, 'blob');
+  }
+
   async verifyPayment(applicationId: string, challanNumber: string, paidAmount: number, remarks?: string): Promise<ApiResponse<any>> {
     return this.post(`/api/applications/${applicationId}/accounts/verify-payment`, {
       challanNumber,
@@ -314,6 +356,35 @@ class ApiService {
 
   async getTransferDeed(applicationId: string): Promise<ApiResponse<any>> {
     return this.get(`/api/applications/${applicationId}/transfer-deed`);
+  }
+
+  // Registers export methods
+  async exportRegistersPDF(params: any = {}): Promise<Response> {
+    const queryParams = new URLSearchParams();
+    Object.keys(params).forEach(key => {
+      if (params[key]) {
+        queryParams.append(key, params[key]);
+      }
+    });
+
+    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    return fetch(`${API_BASE_URL}/api/applications/registers/export-pdf?${queryParams}`, {
+      method: 'GET',
+      headers: {
+        ...(token && { 'Authorization': `Bearer ${token}` })
+      }
+    });
+  }
+
+  // Export case packet as zip
+  async exportCasePacket(applicationId: string): Promise<Response> {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    return fetch(`${API_BASE_URL}/api/applications/${applicationId}/packet`, {
+      method: 'GET',
+      headers: {
+        ...(token && { 'Authorization': `Bearer ${token}` })
+      }
+    });
   }
 }
 

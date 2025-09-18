@@ -96,6 +96,7 @@ export declare const getClearanceById: (clearanceId: string) => Promise<({
         buyerId: string;
         attorneyId: string | null;
         plotId: string;
+        waterNocRequired: boolean;
         applicationNumber: string;
         currentStageId: string;
         previousStageId: string | null;

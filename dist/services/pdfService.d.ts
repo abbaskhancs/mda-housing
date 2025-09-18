@@ -1,5 +1,6 @@
 export interface PDFTemplateData {
-    application: any;
+    application?: any;
+    applications?: any[];
     plot?: any;
     attachments?: any[];
     clearances?: any[];
@@ -11,6 +12,8 @@ export interface PDFTemplateData {
     sectionName?: string;
     memoId?: string;
     memoDate?: Date;
+    generatedAt?: Date;
+    filters?: any;
     [key: string]: any;
 }
 export declare class PDFService {

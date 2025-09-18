@@ -10,7 +10,7 @@ import { StageTimeline } from "../../../components/StageTimeline";
 import { useAuth } from "../../../contexts/AuthContext";
 import { apiService } from "../../../services/api";
 import Link from "next/link";
-import { 
+import {
   DocumentTextIcon,
   PaperClipIcon,
   CheckCircleIcon,
@@ -19,6 +19,7 @@ import {
   ClipboardDocumentListIcon,
   ArrowLeftIcon
 } from "@heroicons/react/24/outline";
+import AccountsTab from "../../../components/AccountsTab";
 
 const tabs = [
   { id: 'summary', name: 'Summary', icon: DocumentTextIcon },
@@ -65,6 +66,7 @@ export default function ApplicationDetail() {
   const [application, setApplication] = useState<Application | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [exportingPacket, setExportingPacket] = useState(false);
 
   const applicationId = params.id as string;
 
@@ -88,6 +90,33 @@ export default function ApplicationDetail() {
       setError(err instanceof Error ? err.message : 'Unknown error occurred');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleExportPacket = async () => {
+    if (!application) return;
+
+    setExportingPacket(true);
+    try {
+      const response = await apiService.exportCasePacket(applicationId);
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `Case_Packet_${application.applicationNumber || applicationId}_${new Date().toISOString().split('T')[0]}.zip`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      } else {
+        throw new Error('Failed to export case packet');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to export case packet');
+    } finally {
+      setExportingPacket(false);
     }
   };
 
@@ -205,15 +234,7 @@ export default function ApplicationDetail() {
         );
 
       case 'accounts':
-        return (
-          <div className="bg-white shadow rounded-lg p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Accounts</h3>
-            <div className="text-center py-8 text-gray-500">
-              <CurrencyDollarIcon className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-              <p>Accounts functionality coming soon</p>
-            </div>
-          </div>
-        );
+        return <AccountsTab applicationId={application.id} />;
 
       case 'deed':
         return (
@@ -330,8 +351,19 @@ export default function ApplicationDetail() {
                 <button className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
                   Print
                 </button>
-                <button className="bg-gray-600 text-white px-4 py-2 rounded text-sm hover:bg-gray-700">
-                  Export
+                <button
+                  onClick={handleExportPacket}
+                  disabled={exportingPacket || !application}
+                  className="bg-gray-600 text-white px-4 py-2 rounded text-sm hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                >
+                  {exportingPacket ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Exporting...</span>
+                    </>
+                  ) : (
+                    <span>Export Case Packet</span>
+                  )}
                 </button>
               </div>
             </div>

@@ -189,6 +189,8 @@ router.get('/transitions', auth_1.authenticateToken, (0, validation_1.validateQu
             }
             return {
                 ...transition,
+                canTransition: guardResult?.canTransition ?? false,
+                reason: guardResult?.reason ?? 'Guard evaluation failed',
                 guardResult
             };
         }));
@@ -271,6 +273,8 @@ router.get('/transitions/:fromStage', auth_1.authenticateToken, (0, validation_1
             }
             return {
                 ...transition,
+                canTransition: guardResult?.canTransition ?? false,
+                reason: guardResult?.reason ?? 'Guard evaluation failed',
                 guardResult
             };
         }));

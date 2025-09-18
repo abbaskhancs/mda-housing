@@ -179,6 +179,7 @@ model Application {
   currentStageId   String
   previousStageId  String?
   status           String   @default("ACTIVE")
+  waterNocRequired Boolean  @default(false)
   submittedAt      DateTime @default(now())
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt

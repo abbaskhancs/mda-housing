@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ur" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Applications Register - MDA Housing</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Nastaliq Urdu', serif;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #333;
+            background: white;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #2563eb;
+            padding-bottom: 20px;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1e40af;
+            margin-bottom: 10px;
+        }
+        
+        .header h2 {
+            font-size: 18px;
+            color: #374151;
+            margin-bottom: 5px;
+        }
+        
+        .header .subtitle {
+            font-size: 14px;
+            color: #6b7280;
+        }
+        
+        .filters {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .filters h3 {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #374151;
+        }
+        
+        .filters-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        
+        .filter-item {
+            font-size: 12px;
+        }
+        
+        .filter-label {
+            font-weight: 600;
+            color: #4b5563;
+        }
+        
+        .filter-value {
+            color: #1f2937;
+        }
+        
+        .table-container {
+            margin-top: 20px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10px;
+        }
+        
+        th, td {
+            border: 1px solid #d1d5db;
+            padding: 8px 6px;
+            text-align: left;
+            vertical-align: top;
+        }
+        
+        th {
+            background-color: #f3f4f6;
+            font-weight: 700;
+            color: #374151;
+            font-size: 11px;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f9fafb;
+        }
+        
+        .app-number {
+            font-weight: 600;
+            color: #1e40af;
+        }
+        
+        .stage-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 9px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .stage-submitted { background: #dbeafe; color: #1e40af; }
+        .stage-scrutiny { background: #fef3c7; color: #92400e; }
+        .stage-bca-housing { background: #e0e7ff; color: #3730a3; }
+        .stage-accounts { background: #dcfce7; color: #166534; }
+        .stage-approval { background: #fce7f3; color: #be185d; }
+        .stage-approved { background: #d1fae5; color: #065f46; }
+        .stage-closed { background: #f3f4f6; color: #374151; }
+        
+        .current-owner {
+            font-weight: 600;
+            color: #059669;
+        }
+        
+        .no-owner {
+            color: #6b7280;
+            font-style: italic;
+        }
+        
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 10px;
+            color: #6b7280;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 15px;
+        }
+        
+        .summary {
+            background: #f0f9ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #0ea5e9;
+        }
+        
+        .summary h3 {
+            font-size: 14px;
+            font-weight: 700;
+            color: #0c4a6e;
+            margin-bottom: 10px;
+        }
+        
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 18px;
+            font-weight: 700;
+            color: #0c4a6e;
+        }
+        
+        .stat-label {
+            font-size: 11px;
+            color: #475569;
+        }
+        
+        @media print {
+            body { -webkit-print-color-adjust: exact; }
+            .page-break { page-break-before: always; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>میٹروپولیٹن ڈیولپمنٹ اتھارٹی</h1>
+        <h2>Applications Register</h2>
+        <div class="subtitle">Generated on {{formatDate generatedAt "DD/MM/YYYY HH:mm"}}</div>
+    </div>
+
+    {{#if filters}}
+    <div class="filters">
+        <h3>Applied Filters</h3>
+        <div class="filters-grid">
+            <div class="filter-item">
+                <span class="filter-label">Stage:</span>
+                <span class="filter-value">{{filters.stage}}</span>
+            </div>
+            <div class="filter-item">
+                <span class="filter-label">Section:</span>
+                <span class="filter-value">{{filters.section}}</span>
+            </div>
+            {{#if filters.search}}
+            <div class="filter-item">
+                <span class="filter-label">Search:</span>
+                <span class="filter-value">{{filters.search}}</span>
+            </div>
+            {{/if}}
+            {{#if filters.dateFrom}}
+            <div class="filter-item">
+                <span class="filter-label">Date From:</span>
+                <span class="filter-value">{{formatDate filters.dateFrom "DD/MM/YYYY"}}</span>
+            </div>
+            {{/if}}
+            {{#if filters.dateTo}}
+            <div class="filter-item">
+                <span class="filter-label">Date To:</span>
+                <span class="filter-value">{{formatDate filters.dateTo "DD/MM/YYYY"}}</span>
+            </div>
+            {{/if}}
+        </div>
+    </div>
+    {{/if}}
+
+    <div class="summary">
+        <h3>Summary</h3>
+        <div class="summary-stats">
+            <div class="stat-item">
+                <div class="stat-number">{{applications.length}}</div>
+                <div class="stat-label">Total Applications</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">{{countByStage applications "APPROVED"}}</div>
+                <div class="stat-label">Approved</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">{{countByStage applications "CLOSED"}}</div>
+                <div class="stat-label">Closed</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>App No.</th>
+                    <th>Plot Details</th>
+                    <th>Current Owner</th>
+                    <th>Seller</th>
+                    <th>Buyer</th>
+                    <th>Stage</th>
+                    <th>Created</th>
+                    <th>Updated</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{#each applications}}
+                <tr>
+                    <td>
+                        <div class="app-number">{{this.applicationNumber}}</div>
+                        <div style="font-size: 8px; color: #6b7280;">{{substring this.id 0 8}}</div>
+                    </td>
+                    <td>
+                        <div><strong>{{this.plot.plotNumber}}</strong></div>
+                        {{#if this.plot.blockNumber}}
+                        <div style="font-size: 9px;">Block: {{this.plot.blockNumber}}</div>
+                        {{/if}}
+                        {{#if this.plot.sectorNumber}}
+                        <div style="font-size: 9px;">Sector: {{this.plot.sectorNumber}}</div>
+                        {{/if}}
+                        {{#if this.plot.area}}
+                        <div style="font-size: 9px;">Area: {{this.plot.area}}</div>
+                        {{/if}}
+                    </td>
+                    <td>
+                        {{#if this.plot.currentOwner}}
+                        <div class="current-owner">{{this.plot.currentOwner.name}}</div>
+                        <div style="font-size: 9px; color: #6b7280;">{{this.plot.currentOwner.cnic}}</div>
+                        {{else}}
+                        <div class="no-owner">No current owner</div>
+                        {{/if}}
+                    </td>
+                    <td>
+                        <div>{{this.seller.name}}</div>
+                        <div style="font-size: 9px; color: #6b7280;">{{this.seller.cnic}}</div>
+                    </td>
+                    <td>
+                        <div>{{this.buyer.name}}</div>
+                        <div style="font-size: 9px; color: #6b7280;">{{this.buyer.cnic}}</div>
+                    </td>
+                    <td>
+                        <span class="stage-badge stage-{{toLowerCase this.currentStage.code}}">
+                            {{this.currentStage.name}}
+                        </span>
+                    </td>
+                    <td>{{formatDate this.createdAt "DD/MM/YY"}}</td>
+                    <td>{{formatDate this.updatedAt "DD/MM/YY"}}</td>
+                </tr>
+                {{/each}}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="footer">
+        <p>MDA Housing Transfer System - Applications Register</p>
+        <p>This document contains {{applications.length}} application(s) as of {{formatDate generatedAt "DD/MM/YYYY HH:mm"}}</p>
+    </div>
+</body>
+</html>

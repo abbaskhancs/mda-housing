@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="ur" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Water Department Clearance Certificate</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', 'Pak Nastaleeq', serif;
+            line-height: 1.6;
+            color: #333;
+            background: #fff;
+            padding: 20px;
+            font-size: 14px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 3px solid #2c5aa0;
+            padding-bottom: 20px;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            color: #2c5aa0;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        
+        .header h2 {
+            font-size: 22px;
+            color: #444;
+            margin-bottom: 5px;
+        }
+        
+        .header .subtitle {
+            font-size: 16px;
+            color: #666;
+            font-style: italic;
+        }
+        
+        .certificate-info {
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+        
+        .certificate-info h3 {
+            color: #2c5aa0;
+            font-size: 18px;
+            margin-bottom: 15px;
+            text-align: center;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 10px;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: #fff;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+        }
+        
+        .info-label {
+            font-weight: bold;
+            color: #495057;
+            font-size: 14px;
+        }
+        
+        .info-value {
+            color: #212529;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .clearance-details {
+            margin-bottom: 25px;
+        }
+        
+        .clearance-details h3 {
+            color: #2c5aa0;
+            font-size: 18px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .property-info {
+            background: #e8f4f8;
+            border: 1px solid #b8daff;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .property-info h4 {
+            color: #004085;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .property-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+        
+        .property-item {
+            background: #fff;
+            padding: 8px 12px;
+            border-radius: 4px;
+            border: 1px solid #cce7ff;
+        }
+        
+        .property-item .label {
+            font-weight: bold;
+            color: #004085;
+            font-size: 12px;
+        }
+        
+        .property-item .value {
+            color: #212529;
+            font-size: 14px;
+            margin-top: 2px;
+        }
+        
+        .status-section {
+            border: 2px solid #28a745;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            background: #f8fff9;
+        }
+        
+        .status-section.status-OBJECTION {
+            border-color: #dc3545;
+            background: #fff5f5;
+        }
+        
+        .status-section.status-PENDING {
+            border-color: #ffc107;
+            background: #fffbf0;
+        }
+        
+        .status-section h4 {
+            color: #28a745;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        
+        .status-section.status-OBJECTION h4 {
+            color: #dc3545;
+        }
+        
+        .status-section.status-PENDING h4 {
+            color: #856404;
+        }
+        
+        .remarks {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        
+        .remarks h4 {
+            color: #856404;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .signature-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #dee2e6;
+        }
+        
+        .signature-box {
+            text-align: center;
+            padding: 20px;
+            border: 2px dashed #adb5bd;
+            border-radius: 8px;
+            background: #f8f9fa;
+        }
+        
+        .signature-box h4 {
+            color: #495057;
+            margin-bottom: 40px;
+            font-size: 16px;
+        }
+        
+        .signature-box p {
+            color: #6c757d;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            color: #6c757d;
+            font-size: 12px;
+        }
+        
+        .footer p {
+            margin-bottom: 10px;
+        }
+        
+        .qr-code {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        
+        @media print {
+            body {
+                padding: 0;
+            }
+            
+            .header, .certificate-info, .clearance-details, .footer {
+                break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>محکمہ آبی وسائل</h1>
+        <h2>کلیرنس سرٹیفکیٹ - واٹر ڈیپارٹمنٹ</h2>
+        <div class="subtitle">Water Department Clearance Certificate</div>
+    </div>
+    
+    <div class="certificate-info">
+        <h3>سرٹیفکیٹ کی تفصیلات</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">درخواست نمبر:</span>
+                <span class="info-value">{{application.id}}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">تاریخ:</span>
+                <span class="info-value">{{formatDate clearance.createdAt}}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">شعبہ:</span>
+                <span class="info-value">واٹر ڈیپارٹمنٹ</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">حالت:</span>
+                <span class="info-value">
+                    <span class="status-badge status-{{clearance.status}}">
+                        {{getStatusText clearance.status}}
+                    </span>
+                </span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="clearance-details">
+        <h3>پراپرٹی کی تفصیلات</h3>
+        <div class="property-info">
+            <h4>زمین کی معلومات</h4>
+            <div class="property-grid">
+                <div class="property-item">
+                    <div class="label">پلاٹ نمبر:</div>
+                    <div class="value">{{application.plot.plotNumber}}</div>
+                </div>
+                <div class="property-item">
+                    <div class="label">بلاک:</div>
+                    <div class="value">{{application.plot.block}}</div>
+                </div>
+                <div class="property-item">
+                    <div class="label">سیکٹر:</div>
+                    <div class="value">{{application.plot.sector}}</div>
+                </div>
+                <div class="property-item">
+                    <div class="label">رقبہ:</div>
+                    <div class="value">{{application.plot.size}} مربع فٹ</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="status-section status-{{clearance.status}}">
+            <h4>کلیرنس کی حالت</h4>
+            <p><strong>نتیجہ:</strong> {{getStatusText clearance.status}}</p>
+            <p><strong>جائزہ لینے والا:</strong> {{clearance.reviewedBy}}</p>
+            <p><strong>جائزے کی تاریخ:</strong> {{formatDate clearance.reviewedAt}}</p>
+        </div>
+        
+        {{#if clearance.remarks}}
+        <div class="remarks">
+            <h4>تبصرات</h4>
+            <p>{{clearance.remarks}}</p>
+        </div>
+        {{/if}}
+    </div>
+    
+    <div class="signature-section">
+        <div class="signature-box">
+            <h4>واٹر ڈیپارٹمنٹ افسر</h4>
+            <p>دستخط</p>
+        </div>
+        <div class="signature-box">
+            <h4>تاریخ</h4>
+            <p>{{formatDate clearance.createdAt}}</p>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p>یہ سرٹیفکیٹ واٹر ڈیپارٹمنٹ کی جانب سے جاری کیا گیا ہے</p>
+        <p>درخواست نمبر: {{application.id}}</p>
+        <div class="qr-code">
+            {{#if qrCodeDataURL}}
+            <img src="{{qrCodeDataURL}}" alt="QR Code" style="width: 100%; height: 100%; object-fit: contain;">
+            {{else}}
+            QR Code<br>
+            {{application.id}}
+            {{/if}}
+        </div>
+    </div>
+</body>
+</html>

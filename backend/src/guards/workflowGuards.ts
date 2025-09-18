@@ -616,9 +616,17 @@ export const GUARD_OWO_REVIEW_COMPLETE: GuardFunction = async (context: GuardCon
       };
     }
 
+    // Check if Water NOC is required - if yes, should go to SENT_TO_WATER instead
+    if (application.waterNocRequired) {
+      return {
+        canTransition: false,
+        reason: 'Water NOC required - should proceed to Water Department first'
+      };
+    }
+
     return {
       canTransition: true,
-      reason: 'OWO review for BCA/Housing completed',
+      reason: 'OWO review for BCA/Housing completed - Water NOC not required, proceeding to Accounts',
       metadata: {
         owoReviewId: owoReview.id
       }
@@ -1295,6 +1303,215 @@ export const GUARD_CLOSE_CASE: GuardFunction = async (context: GuardContext): Pr
 };
 
 /**
+ * GUARD_FIX_AND_RESUBMIT_BCA: Allow OWO to send application back to UNDER_SCRUTINY from ON_HOLD_BCA
+ */
+export const GUARD_FIX_AND_RESUBMIT_BCA: GuardFunction = async (context: GuardContext): Promise<GuardResult> => {
+  try {
+    // Only OWO role can perform this action
+    if (context.userRole !== 'OWO') {
+      return {
+        canTransition: false,
+        reason: 'Only OWO can fix and resubmit from BCA hold'
+      };
+    }
+
+    const application = await prisma.application.findUnique({
+      where: { id: context.applicationId },
+      include: {
+        currentStage: true,
+        clearances: {
+          include: {
+            section: true,
+            status: true
+          }
+        }
+      }
+    });
+
+    if (!application) {
+      return {
+        canTransition: false,
+        reason: 'Application not found'
+      };
+    }
+
+    if (application.currentStage.code !== 'ON_HOLD_BCA') {
+      return {
+        canTransition: false,
+        reason: 'Application must be in ON_HOLD_BCA stage'
+      };
+    }
+
+    // Check if there's a BCA objection
+    const bcaObjection = application.clearances.find(
+      clearance => clearance.section.code === 'BCA' && clearance.status.code === 'OBJECTION'
+    );
+
+    if (!bcaObjection) {
+      return {
+        canTransition: false,
+        reason: 'No BCA objection found'
+      };
+    }
+
+    return {
+      canTransition: true,
+      reason: 'Application can be sent back to UNDER_SCRUTINY for document fixes',
+      metadata: { clearanceId: bcaObjection.id }
+    };
+  } catch (error) {
+    logger.error('Error in GUARD_FIX_AND_RESUBMIT_BCA:', error);
+    return {
+      canTransition: false,
+      reason: 'Error checking fix and resubmit requirements'
+    };
+  }
+};
+
+/**
+ * GUARD_RESEND_TO_BCA_HOUSING: Allow OWO to resend application to BCA & Housing from ON_HOLD_BCA
+ */
+export const GUARD_RESEND_TO_BCA_HOUSING: GuardFunction = async (context: GuardContext): Promise<GuardResult> => {
+  try {
+    // Only OWO role can perform this action
+    if (context.userRole !== 'OWO') {
+      return {
+        canTransition: false,
+        reason: 'Only OWO can resend to BCA & Housing'
+      };
+    }
+
+    const application = await prisma.application.findUnique({
+      where: { id: context.applicationId },
+      include: {
+        currentStage: true,
+        clearances: {
+          include: {
+            section: true,
+            status: true
+          }
+        },
+        attachments: true
+      }
+    });
+
+    if (!application) {
+      return {
+        canTransition: false,
+        reason: 'Application not found'
+      };
+    }
+
+    if (application.currentStage.code !== 'ON_HOLD_BCA') {
+      return {
+        canTransition: false,
+        reason: 'Application must be in ON_HOLD_BCA stage'
+      };
+    }
+
+    // Check if there's a BCA objection
+    const bcaObjection = application.clearances.find(
+      clearance => clearance.section.code === 'BCA' && clearance.status.code === 'OBJECTION'
+    );
+
+    if (!bcaObjection) {
+      return {
+        canTransition: false,
+        reason: 'No BCA objection found'
+      };
+    }
+
+    // Check if new documents have been uploaded since the objection
+    const objectionDate = bcaObjection.createdAt;
+    const newDocuments = application.attachments.filter(
+      attachment => attachment.createdAt > objectionDate
+    );
+
+    if (newDocuments.length === 0) {
+      return {
+        canTransition: false,
+        reason: 'No new documents uploaded since BCA objection. Please upload missing documents first.'
+      };
+    }
+
+    return {
+      canTransition: true,
+      reason: 'Application can be resent to BCA & Housing with new documents',
+      metadata: {
+        clearanceId: bcaObjection.id,
+        newDocumentsCount: newDocuments.length
+      }
+    };
+  } catch (error) {
+    logger.error('Error in GUARD_RESEND_TO_BCA_HOUSING:', error);
+    return {
+      canTransition: false,
+      reason: 'Error checking resend requirements'
+    };
+  }
+};
+
+/**
+ * GUARD_FIX_AND_RESUBMIT_ACCOUNTS: Allow OWO to send application back to UNDER_SCRUTINY from ON_HOLD_ACCOUNTS
+ */
+export const GUARD_FIX_AND_RESUBMIT_ACCOUNTS: GuardFunction = async (context: GuardContext): Promise<GuardResult> => {
+  try {
+    // Only OWO role can perform this action
+    if (context.userRole !== 'OWO') {
+      return {
+        canTransition: false,
+        reason: 'Only OWO can fix and resubmit from Accounts hold'
+      };
+    }
+
+    const application = await prisma.application.findUnique({
+      where: { id: context.applicationId },
+      include: {
+        currentStage: true,
+        accountsBreakdown: true
+      }
+    });
+
+    if (!application) {
+      return {
+        canTransition: false,
+        reason: 'Application not found'
+      };
+    }
+
+    if (application.currentStage.code !== 'ON_HOLD_ACCOUNTS') {
+      return {
+        canTransition: false,
+        reason: 'Application must be in ON_HOLD_ACCOUNTS stage'
+      };
+    }
+
+    // Check if there's an accounts objection
+    if (!application.accountsBreakdown || application.accountsBreakdown.accountsStatus !== 'ON_HOLD') {
+      return {
+        canTransition: false,
+        reason: 'No accounts objection found'
+      };
+    }
+
+    return {
+      canTransition: true,
+      reason: 'Application can be sent back to UNDER_SCRUTINY for document fixes',
+      metadata: {
+        accountsBreakdownId: application.accountsBreakdown.id,
+        objectionReason: application.accountsBreakdown.objectionReason
+      }
+    };
+  } catch (error) {
+    logger.error('Error in GUARD_FIX_AND_RESUBMIT_ACCOUNTS:', error);
+    return {
+      canTransition: false,
+      reason: 'Error checking fix and resubmit requirements'
+    };
+  }
+};
+
+/**
  * GUARD_SET_PENDING_PAYMENT - Set accounts status to AWAITING_PAYMENT
  */
 const GUARD_SET_PENDING_PAYMENT: GuardFunction = async (context: GuardContext): Promise<GuardResult> => {
@@ -1550,6 +1767,394 @@ export const GUARD_OWO_ACCOUNTS_REVIEW_COMPLETE: GuardFunction = async (context:
 };
 
 /**
+ * GUARD_WATER_REQUIRED: Check if Water NOC is required for this application
+ */
+export const GUARD_WATER_REQUIRED: GuardFunction = async (context: GuardContext): Promise<GuardResult> => {
+  try {
+    const application = await prisma.application.findUnique({
+      where: { id: context.applicationId }
+    });
+
+    if (!application) {
+      return {
+        canTransition: false,
+        reason: 'Application not found'
+      };
+    }
+
+    if (application.waterNocRequired) {
+      return {
+        canTransition: true,
+        reason: 'Water NOC is required - sending to Water Department'
+      };
+    }
+
+    return {
+      canTransition: false,
+      reason: 'Water NOC not required - skip Water Department'
+    };
+  } catch (error) {
+    logger.error('GUARD_WATER_REQUIRED error:', error);
+    return {
+      canTransition: false,
+      reason: 'Error checking Water NOC requirement'
+    };
+  }
+};
+
+/**
+ * GUARD_SENT_TO_WATER: Create pending Water clearance
+ */
+export const GUARD_SENT_TO_WATER: GuardFunction = async (context: GuardContext): Promise<GuardResult> => {
+  try {
+    const application = await prisma.application.findUnique({
+      where: { id: context.applicationId },
+      include: {
+        clearances: {
+          include: {
+            section: true,
+            status: true
+          }
+        }
+      }
+    });
+
+    if (!application) {
+      return {
+        canTransition: false,
+        reason: 'Application not found'
+      };
+    }
+
+    // Get Water section and PENDING status
+    const [waterSection, pendingStatus] = await Promise.all([
+      prisma.wfSection.findFirst({ where: { code: 'WATER' } }),
+      prisma.wfStatus.findFirst({ where: { code: 'PENDING' } })
+    ]);
+
+    if (!waterSection || !pendingStatus) {
+      return {
+        canTransition: false,
+        reason: 'Water section or pending status not found'
+      };
+    }
+
+    // Check if clearance already exists
+    const existingWaterClearance = application.clearances.find(
+      clearance => clearance.sectionId === waterSection.id
+    );
+
+    // Create pending clearance if it doesn't exist
+    if (!existingWaterClearance) {
+      await prisma.clearance.create({
+        data: {
+          applicationId: context.applicationId,
+          sectionId: waterSection.id,
+          statusId: pendingStatus.id,
+          remarks: 'Sent to Water for clearance'
+        }
+      });
+    }
+
+    return {
+      canTransition: true,
+      reason: 'Application sent to Water with pending clearance created',
+      metadata: {
+        waterExists: !!existingWaterClearance
+      }
+    };
+  } catch (error) {
+    logger.error('GUARD_SENT_TO_WATER error:', error);
+    return {
+      canTransition: false,
+      reason: 'Error creating pending Water clearance'
+    };
+  }
+};
+
+/**
+ * GUARD_WATER_CLEAR: Check if Water clearance is obtained
+ */
+export const GUARD_WATER_CLEAR: GuardFunction = async (context: GuardContext): Promise<GuardResult> => {
+  try {
+    const application = await prisma.application.findUnique({
+      where: { id: context.applicationId },
+      include: {
+        clearances: {
+          include: {
+            section: true,
+            status: true
+          }
+        }
+      }
+    });
+
+    if (!application) {
+      return {
+        canTransition: false,
+        reason: 'Application not found'
+      };
+    }
+
+    const waterClearance = application.clearances.find(
+      clearance => clearance.section.code === 'WATER' && clearance.status.code === 'CLEAR'
+    );
+
+    if (!waterClearance) {
+      return {
+        canTransition: false,
+        reason: 'Water clearance not obtained'
+      };
+    }
+
+    return {
+      canTransition: true,
+      reason: 'Water clearance obtained',
+      metadata: {
+        waterClearanceId: waterClearance.id
+      }
+    };
+  } catch (error) {
+    logger.error('GUARD_WATER_CLEAR error:', error);
+    return {
+      canTransition: false,
+      reason: 'Error checking Water clearance status'
+    };
+  }
+};
+
+/**
+ * GUARD_WATER_OBJECTION: Check if Water has raised an objection
+ */
+export const GUARD_WATER_OBJECTION: GuardFunction = async (context: GuardContext): Promise<GuardResult> => {
+  try {
+    const application = await prisma.application.findUnique({
+      where: { id: context.applicationId },
+      include: {
+        clearances: {
+          include: {
+            section: true,
+            status: true
+          }
+        }
+      }
+    });
+
+    if (!application) {
+      return {
+        canTransition: false,
+        reason: 'Application not found'
+      };
+    }
+
+    const waterObjection = application.clearances.find(
+      clearance => clearance.section.code === 'WATER' && clearance.status.code === 'OBJECTION'
+    );
+
+    if (!waterObjection) {
+      return {
+        canTransition: false,
+        reason: 'No Water objection found'
+      };
+    }
+
+    return {
+      canTransition: true,
+      reason: 'Water objection raised',
+      metadata: {
+        waterObjectionId: waterObjection.id
+      }
+    };
+  } catch (error) {
+    logger.error('GUARD_WATER_OBJECTION error:', error);
+    return {
+      canTransition: false,
+      reason: 'Error checking Water objection status'
+    };
+  }
+};
+
+/**
+ * GUARD_WATER_COMPLETE: Check if Water clearance process is complete
+ */
+export const GUARD_WATER_COMPLETE: GuardFunction = async (context: GuardContext): Promise<GuardResult> => {
+  try {
+    const application = await prisma.application.findUnique({
+      where: { id: context.applicationId },
+      include: {
+        clearances: {
+          include: {
+            section: true,
+            status: true
+          }
+        }
+      }
+    });
+
+    if (!application) {
+      return {
+        canTransition: false,
+        reason: 'Application not found'
+      };
+    }
+
+    const waterClearance = application.clearances.find(
+      clearance => clearance.section.code === 'WATER' && clearance.status.code === 'CLEAR'
+    );
+
+    if (!waterClearance) {
+      return {
+        canTransition: false,
+        reason: 'Water clearance not complete'
+      };
+    }
+
+    return {
+      canTransition: true,
+      reason: 'Water clearance complete - ready to proceed to Accounts',
+      metadata: {
+        waterClearanceId: waterClearance.id
+      }
+    };
+  } catch (error) {
+    logger.error('GUARD_WATER_COMPLETE error:', error);
+    return {
+      canTransition: false,
+      reason: 'Error checking Water completion status'
+    };
+  }
+};
+
+/**
+ * GUARD_WATER_RESOLVED: Check if Water objection has been resolved
+ */
+export const GUARD_WATER_RESOLVED: GuardFunction = async (context: GuardContext): Promise<GuardResult> => {
+  try {
+    const application = await prisma.application.findUnique({
+      where: { id: context.applicationId },
+      include: {
+        clearances: {
+          include: {
+            section: true,
+            status: true
+          }
+        }
+      }
+    });
+
+    if (!application) {
+      return {
+        canTransition: false,
+        reason: 'Application not found'
+      };
+    }
+
+    const waterClearance = application.clearances.find(
+      clearance => clearance.section.code === 'WATER'
+    );
+
+    if (!waterClearance) {
+      return {
+        canTransition: false,
+        reason: 'No Water clearance found'
+      };
+    }
+
+    // Check if objection has been resolved (status changed from OBJECTION)
+    if (waterClearance.status.code === 'OBJECTION') {
+      return {
+        canTransition: false,
+        reason: 'Water objection still pending'
+      };
+    }
+
+    return {
+      canTransition: true,
+      reason: 'Water objection resolved',
+      metadata: {
+        waterClearanceId: waterClearance.id,
+        currentStatus: waterClearance.status.code
+      }
+    };
+  } catch (error) {
+    logger.error('GUARD_WATER_RESOLVED error:', error);
+    return {
+      canTransition: false,
+      reason: 'Error checking Water resolution status'
+    };
+  }
+};
+
+/**
+ * GUARD_FIX_AND_RESUBMIT_WATER: Allow OWO to send applications back to UNDER_SCRUTINY from ON_HOLD_WATER
+ */
+export const GUARD_FIX_AND_RESUBMIT_WATER: GuardFunction = async (context: GuardContext): Promise<GuardResult> => {
+  try {
+    // Only OWO can perform this action
+    if (context.userRole !== 'OWO') {
+      return {
+        canTransition: false,
+        reason: 'Only OWO can fix and resubmit applications'
+      };
+    }
+
+    const application = await prisma.application.findUnique({
+      where: { id: context.applicationId },
+      include: {
+        currentStage: true,
+        clearances: {
+          include: {
+            section: true,
+            status: true
+          }
+        }
+      }
+    });
+
+    if (!application) {
+      return {
+        canTransition: false,
+        reason: 'Application not found'
+      };
+    }
+
+    // Must be in ON_HOLD_WATER stage
+    if (application.currentStage.code !== 'ON_HOLD_WATER') {
+      return {
+        canTransition: false,
+        reason: 'Application must be in ON_HOLD_WATER stage'
+      };
+    }
+
+    // Check if there's a Water objection
+    const waterObjection = application.clearances.find(
+      clearance => clearance.section.code === 'WATER' && clearance.status.code === 'OBJECTION'
+    );
+
+    if (!waterObjection) {
+      return {
+        canTransition: false,
+        reason: 'No Water objection found to fix'
+      };
+    }
+
+    return {
+      canTransition: true,
+      reason: 'OWO can fix and resubmit application from Water objection',
+      metadata: {
+        waterObjectionId: waterObjection.id
+      }
+    };
+  } catch (error) {
+    logger.error('GUARD_FIX_AND_RESUBMIT_WATER error:', error);
+    return {
+      canTransition: false,
+      reason: 'Error checking fix and resubmit eligibility'
+    };
+  }
+};
+
+/**
  * GUARDS map - Central registry of all workflow guards
  */
 export const GUARDS: Record<string, GuardFunction> = {
@@ -1578,7 +2183,17 @@ export const GUARDS: Record<string, GuardFunction> = {
   GUARD_APPROVAL_REJECTED,
   GUARD_DEED_FINALIZED,
   GUARD_START_POST_ENTRIES,
-  GUARD_CLOSE_CASE
+  GUARD_CLOSE_CASE,
+  GUARD_FIX_AND_RESUBMIT_BCA,
+  GUARD_RESEND_TO_BCA_HOUSING,
+  GUARD_FIX_AND_RESUBMIT_ACCOUNTS,
+  GUARD_WATER_REQUIRED,
+  GUARD_SENT_TO_WATER,
+  GUARD_WATER_CLEAR,
+  GUARD_WATER_OBJECTION,
+  GUARD_WATER_COMPLETE,
+  GUARD_WATER_RESOLVED,
+  GUARD_FIX_AND_RESUBMIT_WATER
 };
 
 /**
@@ -1648,7 +2263,17 @@ export const getGuardDescription = (guardName: string): string => {
     'GUARD_APPROVAL_REJECTED': 'Check if approval has been rejected',
     'GUARD_DEED_FINALIZED': 'Check if transfer deed has been finalized',
     'GUARD_START_POST_ENTRIES': 'Check if application can start post-entries phase',
-    'GUARD_CLOSE_CASE': 'Check if case can be closed'
+    'GUARD_CLOSE_CASE': 'Check if case can be closed',
+    'GUARD_FIX_AND_RESUBMIT_BCA': 'Allow OWO to send application back to UNDER_SCRUTINY from ON_HOLD_BCA',
+    'GUARD_RESEND_TO_BCA_HOUSING': 'Allow OWO to resend application to BCA & Housing from ON_HOLD_BCA',
+    'GUARD_FIX_AND_RESUBMIT_ACCOUNTS': 'Allow OWO to send application back to UNDER_SCRUTINY from ON_HOLD_ACCOUNTS',
+    'GUARD_WATER_REQUIRED': 'Check if Water NOC is required for this application',
+    'GUARD_SENT_TO_WATER': 'Create pending Water clearance',
+    'GUARD_WATER_CLEAR': 'Check if Water clearance is obtained',
+    'GUARD_WATER_OBJECTION': 'Check if Water has raised an objection',
+    'GUARD_WATER_COMPLETE': 'Check if Water clearance process is complete',
+    'GUARD_WATER_RESOLVED': 'Check if Water objection has been resolved',
+    'GUARD_FIX_AND_RESUBMIT_WATER': 'Allow OWO to send application back to UNDER_SCRUTINY from ON_HOLD_WATER'
   };
 
   return descriptions[guardName] || 'No description available';

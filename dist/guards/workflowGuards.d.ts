@@ -97,6 +97,18 @@ export declare const GUARD_START_POST_ENTRIES: GuardFunction;
  */
 export declare const GUARD_CLOSE_CASE: GuardFunction;
 /**
+ * GUARD_FIX_AND_RESUBMIT_BCA: Allow OWO to send application back to UNDER_SCRUTINY from ON_HOLD_BCA
+ */
+export declare const GUARD_FIX_AND_RESUBMIT_BCA: GuardFunction;
+/**
+ * GUARD_RESEND_TO_BCA_HOUSING: Allow OWO to resend application to BCA & Housing from ON_HOLD_BCA
+ */
+export declare const GUARD_RESEND_TO_BCA_HOUSING: GuardFunction;
+/**
+ * GUARD_FIX_AND_RESUBMIT_ACCOUNTS: Allow OWO to send application back to UNDER_SCRUTINY from ON_HOLD_ACCOUNTS
+ */
+export declare const GUARD_FIX_AND_RESUBMIT_ACCOUNTS: GuardFunction;
+/**
  * GUARD_ACCOUNTS_REVIEWED: Check if accounts have been reviewed by OWO
  */
 export declare const GUARD_ACCOUNTS_REVIEWED: GuardFunction;
@@ -104,6 +116,34 @@ export declare const GUARD_ACCOUNTS_REVIEWED: GuardFunction;
  * GUARD_OWO_ACCOUNTS_REVIEW_COMPLETE: Check if OWO review for Accounts is complete
  */
 export declare const GUARD_OWO_ACCOUNTS_REVIEW_COMPLETE: GuardFunction;
+/**
+ * GUARD_WATER_REQUIRED: Check if Water NOC is required for this application
+ */
+export declare const GUARD_WATER_REQUIRED: GuardFunction;
+/**
+ * GUARD_SENT_TO_WATER: Create pending Water clearance
+ */
+export declare const GUARD_SENT_TO_WATER: GuardFunction;
+/**
+ * GUARD_WATER_CLEAR: Check if Water clearance is obtained
+ */
+export declare const GUARD_WATER_CLEAR: GuardFunction;
+/**
+ * GUARD_WATER_OBJECTION: Check if Water has raised an objection
+ */
+export declare const GUARD_WATER_OBJECTION: GuardFunction;
+/**
+ * GUARD_WATER_COMPLETE: Check if Water clearance process is complete
+ */
+export declare const GUARD_WATER_COMPLETE: GuardFunction;
+/**
+ * GUARD_WATER_RESOLVED: Check if Water objection has been resolved
+ */
+export declare const GUARD_WATER_RESOLVED: GuardFunction;
+/**
+ * GUARD_FIX_AND_RESUBMIT_WATER: Allow OWO to send applications back to UNDER_SCRUTINY from ON_HOLD_WATER
+ */
+export declare const GUARD_FIX_AND_RESUBMIT_WATER: GuardFunction;
 /**
  * GUARDS map - Central registry of all workflow guards
  */

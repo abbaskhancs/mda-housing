@@ -181,6 +181,8 @@ router.get('/transitions', authenticateToken, validateQuery(workflowSchemas.getT
 
         return {
           ...transition,
+          canTransition: guardResult?.canTransition ?? false,
+          reason: guardResult?.reason ?? 'Guard evaluation failed',
           guardResult
         };
       })
@@ -273,6 +275,8 @@ router.get('/transitions/:fromStage', authenticateToken, validateParams(z.object
 
         return {
           ...transition,
+          canTransition: guardResult?.canTransition ?? false,
+          reason: guardResult?.reason ?? 'Guard evaluation failed',
           guardResult
         };
       })

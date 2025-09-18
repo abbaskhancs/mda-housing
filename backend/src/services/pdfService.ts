@@ -7,7 +7,8 @@ import { logger } from '../config/logger';
 import { formatCurrencyInWordsHelper } from '../utils/numberToWords';
 
 export interface PDFTemplateData {
-  application: any;
+  application?: any;
+  applications?: any[];
   plot?: any;
   attachments?: any[];
   clearances?: any[];
@@ -19,6 +20,8 @@ export interface PDFTemplateData {
   sectionName?: string;
   memoId?: string;
   memoDate?: Date;
+  generatedAt?: Date;
+  filters?: any;
   [key: string]: any;
 }
 
@@ -105,6 +108,53 @@ export class PDFService {
     handlebars.registerHelper('formatCurrencyInWords', (amount: number) => {
       return formatCurrencyInWordsHelper(amount);
     });
+
+    // String manipulation helpers
+    handlebars.registerHelper('toLowerCase', (str: string) => {
+      return str ? str.toLowerCase() : '';
+    });
+
+    handlebars.registerHelper('substring', (str: string, start: number, end?: number) => {
+      if (!str) return '';
+      return end ? str.substring(start, end) : str.substring(start);
+    });
+
+    // Array counting helper
+    handlebars.registerHelper('countByStage', (applications: any[], stageCode: string) => {
+      if (!applications || !Array.isArray(applications)) return 0;
+      return applications.filter(app => app.currentStage?.code === stageCode).length;
+    });
+
+    // Enhanced date formatting with custom format
+    handlebars.registerHelper('formatDate', (date: Date | string, format?: string) => {
+      if (!date) return '';
+      const d = new Date(date);
+
+      if (format) {
+        // Simple format parsing for common patterns
+        if (format === 'DD/MM/YYYY') {
+          return d.toLocaleDateString('en-GB');
+        } else if (format === 'DD/MM/YY') {
+          return d.toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: '2-digit',
+            year: '2-digit'
+          });
+        } else if (format === 'DD/MM/YYYY HH:mm') {
+          return d.toLocaleDateString('en-GB') + ' ' + d.toLocaleTimeString('en-GB', {
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+        }
+      }
+
+      // Default Urdu formatting
+      return d.toLocaleDateString('ur-PK', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    });
   }
 
   async initialize() {
@@ -164,8 +214,13 @@ export class PDFService {
       const templateContent = await this.loadTemplate(templateName);
       const template = handlebars.compile(templateContent);
       
-      // Generate QR code for the application
-      const qrData = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/applications/${data.application.id}`;
+      // Generate QR code for the application or registers page
+      let qrData = `${process.env.FRONTEND_URL || 'http://localhost:3000'}`;
+      if (data.application?.id) {
+        qrData += `/applications/${data.application.id}`;
+      } else {
+        qrData += `/registers`;
+      }
       const qrCodeDataURL = await this.generateQRCode(qrData);
       
       // Add QR code to data

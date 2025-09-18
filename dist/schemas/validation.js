@@ -13,6 +13,13 @@ const positiveDecimalSchema = zod_1.z.string().transform((val) => {
     }
     return num;
 });
+const nonNegativeDecimalSchema = zod_1.z.string().transform((val) => {
+    const num = parseFloat(val);
+    if (isNaN(num) || num < 0) {
+        throw new Error('Must be a non-negative number');
+    }
+    return num;
+});
 // Auth schemas
 exports.authSchemas = {
     login: zod_1.z.object({
@@ -80,6 +87,7 @@ exports.applicationSchemas = {
         buyerId: zod_1.z.string().cuid('Invalid buyer ID'),
         attorneyId: zod_1.z.string().cuid('Invalid attorney ID').optional(),
         plotId: zod_1.z.string().cuid('Invalid plot ID'),
+        waterNocRequired: zod_1.z.boolean().optional().default(false),
         // Attachments will be handled separately via multer
     }),
     update: zod_1.z.object({
@@ -152,24 +160,24 @@ exports.clearanceSchemas = {
 // Accounts schemas
 exports.accountsSchemas = {
     create: zod_1.z.object({
-        arrears: positiveDecimalSchema.optional(),
-        surcharge: positiveDecimalSchema.optional(),
-        nonUser: positiveDecimalSchema.optional(),
-        transferFee: positiveDecimalSchema.optional(),
-        attorneyFee: positiveDecimalSchema.optional(),
-        water: positiveDecimalSchema.optional(),
-        suiGas: positiveDecimalSchema.optional(),
-        additional: positiveDecimalSchema.optional()
+        arrears: nonNegativeDecimalSchema.optional(),
+        surcharge: nonNegativeDecimalSchema.optional(),
+        nonUser: nonNegativeDecimalSchema.optional(),
+        transferFee: nonNegativeDecimalSchema.optional(),
+        attorneyFee: nonNegativeDecimalSchema.optional(),
+        water: nonNegativeDecimalSchema.optional(),
+        suiGas: nonNegativeDecimalSchema.optional(),
+        additional: nonNegativeDecimalSchema.optional()
     }),
     update: zod_1.z.object({
-        arrears: positiveDecimalSchema.optional(),
-        surcharge: positiveDecimalSchema.optional(),
-        nonUser: positiveDecimalSchema.optional(),
-        transferFee: positiveDecimalSchema.optional(),
-        attorneyFee: positiveDecimalSchema.optional(),
-        water: positiveDecimalSchema.optional(),
-        suiGas: positiveDecimalSchema.optional(),
-        additional: positiveDecimalSchema.optional(),
+        arrears: nonNegativeDecimalSchema.optional(),
+        surcharge: nonNegativeDecimalSchema.optional(),
+        nonUser: nonNegativeDecimalSchema.optional(),
+        transferFee: nonNegativeDecimalSchema.optional(),
+        attorneyFee: nonNegativeDecimalSchema.optional(),
+        water: nonNegativeDecimalSchema.optional(),
+        suiGas: nonNegativeDecimalSchema.optional(),
+        additional: nonNegativeDecimalSchema.optional(),
         paidAmount: positiveDecimalSchema.optional(),
         challanUrl: zod_1.z.string().url('Invalid challan URL').optional()
     }),

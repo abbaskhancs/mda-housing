@@ -89,6 +89,52 @@ class PDFService {
         handlebars_1.default.registerHelper('formatCurrencyInWords', (amount) => {
             return (0, numberToWords_1.formatCurrencyInWordsHelper)(amount);
         });
+        // String manipulation helpers
+        handlebars_1.default.registerHelper('toLowerCase', (str) => {
+            return str ? str.toLowerCase() : '';
+        });
+        handlebars_1.default.registerHelper('substring', (str, start, end) => {
+            if (!str)
+                return '';
+            return end ? str.substring(start, end) : str.substring(start);
+        });
+        // Array counting helper
+        handlebars_1.default.registerHelper('countByStage', (applications, stageCode) => {
+            if (!applications || !Array.isArray(applications))
+                return 0;
+            return applications.filter(app => app.currentStage?.code === stageCode).length;
+        });
+        // Enhanced date formatting with custom format
+        handlebars_1.default.registerHelper('formatDate', (date, format) => {
+            if (!date)
+                return '';
+            const d = new Date(date);
+            if (format) {
+                // Simple format parsing for common patterns
+                if (format === 'DD/MM/YYYY') {
+                    return d.toLocaleDateString('en-GB');
+                }
+                else if (format === 'DD/MM/YY') {
+                    return d.toLocaleDateString('en-GB', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: '2-digit'
+                    });
+                }
+                else if (format === 'DD/MM/YYYY HH:mm') {
+                    return d.toLocaleDateString('en-GB') + ' ' + d.toLocaleTimeString('en-GB', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                }
+            }
+            // Default Urdu formatting
+            return d.toLocaleDateString('ur-PK', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        });
     }
     async initialize() {
         if (!this.browser) {
@@ -144,8 +190,14 @@ class PDFService {
         try {
             const templateContent = await this.loadTemplate(templateName);
             const template = handlebars_1.default.compile(templateContent);
-            // Generate QR code for the application
-            const qrData = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/applications/${data.application.id}`;
+            // Generate QR code for the application or registers page
+            let qrData = `${process.env.FRONTEND_URL || 'http://localhost:3000'}`;
+            if (data.application?.id) {
+                qrData += `/applications/${data.application.id}`;
+            }
+            else {
+                qrData += `/registers`;
+            }
             const qrCodeDataURL = await this.generateQRCode(qrData);
             // Add QR code to data
             const templateData = {

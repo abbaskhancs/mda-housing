@@ -191,6 +191,18 @@ const checkAutoProgress = async (
         nextStageCode = 'ON_HOLD_HOUSING';
         guardName = 'GUARD_HOUSING_OBJECTION';
       }
+    } else if (sectionCode === 'WATER' && statusCode === 'CLEAR') {
+      // Water cleared - move to SENT_TO_ACCOUNTS
+      if (currentStage.code === 'WATER_PENDING') {
+        nextStageCode = 'SENT_TO_ACCOUNTS';
+        guardName = 'GUARD_WATER_COMPLETE';
+      }
+    } else if (sectionCode === 'WATER' && statusCode === 'OBJECTION') {
+      // Water objection - move to ON_HOLD_WATER
+      if (currentStage.code === 'WATER_PENDING') {
+        nextStageCode = 'ON_HOLD_WATER';
+        guardName = 'GUARD_WATER_OBJECTION';
+      }
     }
 
     if (!nextStageCode || !guardName) {

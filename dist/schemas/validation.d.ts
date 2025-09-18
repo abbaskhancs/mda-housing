@@ -144,16 +144,19 @@ export declare const applicationSchemas: {
         buyerId: z.ZodString;
         attorneyId: z.ZodOptional<z.ZodString>;
         plotId: z.ZodString;
+        waterNocRequired: z.ZodDefault<z.ZodOptional<z.ZodBoolean>>;
     }, "strip", z.ZodTypeAny, {
         sellerId: string;
         buyerId: string;
         plotId: string;
+        waterNocRequired: boolean;
         attorneyId?: string | undefined;
     }, {
         sellerId: string;
         buyerId: string;
         plotId: string;
         attorneyId?: string | undefined;
+        waterNocRequired?: boolean | undefined;
     }>;
     update: z.ZodObject<{
         attorneyId: z.ZodOptional<z.ZodString>;

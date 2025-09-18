@@ -125,6 +125,8 @@ export default function RegistersPage() {
       'Plot Number',
       'Sector',
       'Plot Size',
+      'Current Owner',
+      'Current Owner CNIC',
       'Seller Name',
       'Seller CNIC',
       'Buyer Name',
@@ -139,6 +141,8 @@ export default function RegistersPage() {
       app.plot.plotNumber,
       app.plot.sector,
       app.plot.size,
+      app.plot.currentOwner?.name || 'No current owner',
+      app.plot.currentOwner?.cnic || '',
       app.seller.name,
       app.seller.cnic,
       app.buyer.name,
@@ -160,6 +164,32 @@ export default function RegistersPage() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const exportToPDF = async () => {
+    if (applications.length === 0) return;
+
+    try {
+      const response = await apiService.exportRegistersPDF(filters);
+
+      if (!response.ok) {
+        throw new Error('Failed to generate PDF');
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `applications_register_${new Date().toISOString().split('T')[0]}.pdf`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error exporting PDF:', err);
+      setError('Failed to export PDF');
+    }
   };
 
   const getStageColor = (stageCode: string) => {
@@ -222,6 +252,14 @@ export default function RegistersPage() {
                 >
                   <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
                   Export CSV
+                </button>
+                <button
+                  onClick={exportToPDF}
+                  disabled={applications.length === 0}
+                  className="bg-red-600 text-white px-4 py-2 rounded text-sm hover:bg-red-700 disabled:opacity-50 flex items-center"
+                >
+                  <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
+                  Export PDF
                 </button>
               </div>
             </div>
@@ -368,6 +406,9 @@ export default function RegistersPage() {
                         Plot Details
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Current Owner
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Parties
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -399,6 +440,22 @@ export default function RegistersPage() {
                           <div className="text-sm text-gray-500">
                             {app.plot.sector} • {app.plot.size}
                           </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {app.plot.currentOwner ? (
+                            <div>
+                              <div className="text-sm font-medium text-green-600">
+                                {app.plot.currentOwner.name}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {app.plot.currentOwner.cnic}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-sm text-gray-400 italic">
+                              No current owner
+                            </div>
+                          )}
                         </td>
                         <td className="px-6 py-4">
                           <div className="text-sm text-gray-900">
