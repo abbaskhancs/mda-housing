@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import AuthGuard from "../../../components/AuthGuard";
 import WorkflowActions from "../../../components/WorkflowActions";
+import { PhotoSignatureCapture } from "../../../components/PhotoSignatureCapture";
 import { useAuth } from "../../../contexts/AuthContext";
 import { apiService, Application } from "../../../services/api";
 import {
@@ -21,6 +22,7 @@ interface TransferDeed {
   witness1Id: string;
   witness2Id: string;
   deedContent: string | null;
+  finalPdfUrl: string | null;
   isFinalized: boolean;
   hashSha256: string | null;
   witness1Signature: string | null;
@@ -45,6 +47,18 @@ interface DeedFormData {
   deedContent: string;
   witness1Signature: string;
   witness2Signature: string;
+  finalPdfUrl: string;
+}
+
+interface PhotoSignatureData {
+  sellerPhoto: File | null;
+  buyerPhoto: File | null;
+  witness1Photo: File | null;
+  witness2Photo: File | null;
+  sellerSignature: File | null;
+  buyerSignature: File | null;
+  witness1Signature: File | null;
+  witness2Signature: File | null;
 }
 
 export default function ApprovalConsole() {
@@ -59,9 +73,21 @@ export default function ApprovalConsole() {
     witness2Id: '',
     deedContent: '',
     witness1Signature: '',
-    witness2Signature: ''
+    witness2Signature: '',
+    finalPdfUrl: ''
+  });
+  const [photoSignatureData, setPhotoSignatureData] = useState<PhotoSignatureData>({
+    sellerPhoto: null,
+    buyerPhoto: null,
+    witness1Photo: null,
+    witness2Photo: null,
+    sellerSignature: null,
+    buyerSignature: null,
+    witness1Signature: null,
+    witness2Signature: null
   });
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
 
   useEffect(() => {
     loadApplications();
@@ -101,7 +127,8 @@ export default function ApprovalConsole() {
           witness2Id: response.data.witness2Id,
           deedContent: response.data.deedContent || '',
           witness1Signature: response.data.witness1Signature || '',
-          witness2Signature: response.data.witness2Signature || ''
+          witness2Signature: response.data.witness2Signature || '',
+          finalPdfUrl: response.data.finalPdfUrl || ''
         });
       } else {
         setTransferDeed(null);
@@ -110,7 +137,8 @@ export default function ApprovalConsole() {
           witness2Id: '',
           deedContent: '',
           witness1Signature: '',
-          witness2Signature: ''
+          witness2Signature: '',
+          finalPdfUrl: ''
         });
       }
     } catch (err) {
@@ -148,14 +176,69 @@ export default function ApprovalConsole() {
     }
   };
 
+  const handleUploadPhotosSignatures = async () => {
+    if (!selectedApp || !transferDeed) return;
+
+    // Check if we have at least some files to upload
+    const hasFiles = Object.values(photoSignatureData).some(file => file !== null);
+    if (!hasFiles) {
+      alert('Please select at least one photo or signature to upload.');
+      return;
+    }
+
+    setUploadingPhotos(true);
+    try {
+      const formData = new FormData();
+
+      // Add all selected files to form data
+      Object.entries(photoSignatureData).forEach(([key, file]) => {
+        if (file) {
+          formData.append(key, file);
+        }
+      });
+
+      const response = await fetch(`/api/applications/${selectedApp.id}/transfer-deed/photos-signatures`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+        },
+        body: formData
+      });
+
+      if (response.ok) {
+        await loadTransferDeed(selectedApp.id);
+        alert('Photos and signatures uploaded successfully!');
+        // Reset the form
+        setPhotoSignatureData({
+          sellerPhoto: null,
+          buyerPhoto: null,
+          witness1Photo: null,
+          witness2Photo: null,
+          sellerSignature: null,
+          buyerSignature: null,
+          witness1Signature: null,
+          witness2Signature: null
+        });
+      } else {
+        const errorData = await response.json();
+        alert(`Error: ${errorData.error || 'Upload failed'}`);
+      }
+    } catch (err) {
+      alert(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setUploadingPhotos(false);
+    }
+  };
+
   const handleFinalizeDeed = async () => {
-    if (!selectedApp || !transferDeed || !deedForm.witness1Signature || !deedForm.witness2Signature) return;
+    if (!selectedApp || !transferDeed || !deedForm.witness1Signature || !deedForm.witness2Signature || !deedForm.finalPdfUrl) return;
 
     setSubmitting(true);
     try {
       const response = await apiService.post(`/api/applications/${selectedApp.id}/transfer-deed/finalize`, {
         witness1Signature: deedForm.witness1Signature,
-        witness2Signature: deedForm.witness2Signature
+        witness2Signature: deedForm.witness2Signature,
+        finalPdfUrl: deedForm.finalPdfUrl
       });
 
       if (response.success) {
@@ -363,32 +446,47 @@ export default function ApprovalConsole() {
                       </div>
 
                       {transferDeed && !transferDeed.isFinalized && (
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <>
                           <div>
                             <label className="block text-sm font-medium text-gray-700">
-                              Witness 1 Signature
+                              Final PDF URL
                             </label>
                             <input
-                              type="text"
-                              value={deedForm.witness1Signature}
-                              onChange={(e) => setDeedForm({...deedForm, witness1Signature: e.target.value})}
+                              type="url"
+                              value={deedForm.finalPdfUrl}
+                              onChange={(e) => setDeedForm({...deedForm, finalPdfUrl: e.target.value})}
                               className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                              placeholder="Enter witness 1 signature"
+                              placeholder="Enter final PDF URL"
+                              required
                             />
                           </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700">
-                              Witness 2 Signature
-                            </label>
-                            <input
-                              type="text"
-                              value={deedForm.witness2Signature}
-                              onChange={(e) => setDeedForm({...deedForm, witness2Signature: e.target.value})}
-                              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                              placeholder="Enter witness 2 signature"
-                            />
+                          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700">
+                                Witness 1 Signature
+                              </label>
+                              <input
+                                type="text"
+                                value={deedForm.witness1Signature}
+                                onChange={(e) => setDeedForm({...deedForm, witness1Signature: e.target.value})}
+                                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                placeholder="Enter witness 1 signature"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700">
+                                Witness 2 Signature
+                              </label>
+                              <input
+                                type="text"
+                                value={deedForm.witness2Signature}
+                                onChange={(e) => setDeedForm({...deedForm, witness2Signature: e.target.value})}
+                                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                placeholder="Enter witness 2 signature"
+                              />
+                            </div>
                           </div>
-                        </div>
+                        </>
                       )}
 
                       {transferDeed?.isFinalized && (
@@ -401,6 +499,9 @@ export default function ApprovalConsole() {
                               </h3>
                               <div className="mt-2 text-sm text-green-700">
                                 <p>Hash: <code className="bg-green-100 px-1 rounded">{transferDeed.hashSha256}</code></p>
+                                {transferDeed.finalPdfUrl && (
+                                  <p>Final PDF: <a href={transferDeed.finalPdfUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">View Document</a></p>
+                                )}
                                 <p>Finalized: {new Date(transferDeed.finalizedAt!).toLocaleString()}</p>
                               </div>
                             </div>
@@ -420,10 +521,11 @@ export default function ApprovalConsole() {
                         ) : !transferDeed.isFinalized ? (
                           <button
                             onClick={handleFinalizeDeed}
-                            disabled={submitting || !deedForm.witness1Signature || !deedForm.witness2Signature}
+                            disabled={submitting || !deedForm.witness1Signature || !deedForm.witness2Signature || !deedForm.finalPdfUrl}
                             className="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700 disabled:opacity-50"
+                            title={!deedForm.finalPdfUrl ? 'Final PDF URL is required' : !deedForm.witness1Signature || !deedForm.witness2Signature ? 'Witness signatures are required' : 'Approve & Lock Deed'}
                           >
-                            {submitting ? 'Finalizing...' : 'Finalize & Lock Deed'}
+                            {submitting ? 'Finalizing...' : 'Approve & Lock Deed'}
                           </button>
                         ) : (
                           <span className="text-green-600 font-medium">✓ Deed Finalized</span>
@@ -431,6 +533,31 @@ export default function ApprovalConsole() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Photo & Signature Capture */}
+                  {transferDeed && !transferDeed.isFinalized && (
+                    <div className="bg-white shadow rounded-lg p-6">
+                      <PhotoSignatureCapture
+                        applicationId={selectedApp.id}
+                        sellerName={selectedApp.seller.name}
+                        buyerName={selectedApp.buyer.name}
+                        witness1Name={transferDeed.witness1?.name}
+                        witness2Name={transferDeed.witness2?.name}
+                        onDataChange={setPhotoSignatureData}
+                        disabled={uploadingPhotos}
+                      />
+
+                      <div className="mt-4 flex justify-end">
+                        <button
+                          onClick={handleUploadPhotosSignatures}
+                          disabled={uploadingPhotos}
+                          className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 disabled:opacity-50"
+                        >
+                          {uploadingPhotos ? 'Uploading...' : 'Upload Photos & Signatures'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Workflow Actions */}
                   <WorkflowActions

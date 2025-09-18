@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getGuardDescription = exports.validateGuardContext = exports.getAvailableGuards = exports.executeGuard = exports.GUARDS = exports.GUARD_ACCOUNTS_REVIEWED = exports.GUARD_DEED_FINALIZED = exports.GUARD_SENT_TO_BCA_HOUSING = exports.GUARD_SENT_TO_ACCOUNTS = exports.GUARD_APPROVAL_REJECTED = exports.GUARD_APPROVAL_COMPLETE = exports.GUARD_ACCOUNTS_CLEAR = exports.GUARD_PAYMENT_VERIFIED = exports.GUARD_ACCOUNTS_CALCULATED = exports.GUARD_OWO_REVIEW_COMPLETE = exports.GUARD_BCA_HOUSING_REVIEW = exports.GUARD_HOUSING_RESOLVED = exports.GUARD_BCA_RESOLVED = exports.GUARD_CLEARANCES_COMPLETE = exports.GUARD_HOUSING_OBJECTION = exports.GUARD_HOUSING_CLEAR = exports.GUARD_BCA_OBJECTION = exports.GUARD_BCA_CLEAR = exports.GUARD_SCRUTINY_COMPLETE = exports.GUARD_INTAKE_COMPLETE = void 0;
+exports.getGuardDescription = exports.validateGuardContext = exports.getAvailableGuards = exports.executeGuard = exports.GUARDS = exports.GUARD_OWO_ACCOUNTS_REVIEW_COMPLETE = exports.GUARD_ACCOUNTS_REVIEWED = exports.GUARD_DEED_FINALIZED = exports.GUARD_SENT_TO_BCA_HOUSING = exports.GUARD_SENT_TO_ACCOUNTS = exports.GUARD_APPROVAL_REJECTED = exports.GUARD_APPROVAL_COMPLETE = exports.GUARD_ACCOUNTS_CLEAR = exports.GUARD_PAYMENT_VERIFIED = exports.GUARD_ACCOUNTS_CALCULATED = exports.GUARD_OWO_REVIEW_COMPLETE = exports.GUARD_BCA_HOUSING_REVIEW = exports.GUARD_HOUSING_RESOLVED = exports.GUARD_BCA_RESOLVED = exports.GUARD_CLEARANCES_COMPLETE = exports.GUARD_HOUSING_OBJECTION = exports.GUARD_HOUSING_CLEAR = exports.GUARD_BCA_OBJECTION = exports.GUARD_BCA_CLEAR = exports.GUARD_SCRUTINY_COMPLETE = exports.GUARD_INTAKE_COMPLETE = void 0;
 const client_1 = require("@prisma/client");
 const logger_1 = require("../config/logger");
 const prisma = new client_1.PrismaClient();
@@ -1246,6 +1246,53 @@ const GUARD_ACCOUNTS_REVIEWED = async (context) => {
 };
 exports.GUARD_ACCOUNTS_REVIEWED = GUARD_ACCOUNTS_REVIEWED;
 /**
+ * GUARD_OWO_ACCOUNTS_REVIEW_COMPLETE: Check if OWO review for Accounts is complete
+ */
+const GUARD_OWO_ACCOUNTS_REVIEW_COMPLETE = async (context) => {
+    try {
+        const application = await prisma.application.findUnique({
+            where: { id: context.applicationId },
+            include: {
+                reviews: {
+                    include: {
+                        section: true
+                    }
+                }
+            }
+        });
+        if (!application) {
+            return {
+                canTransition: false,
+                reason: 'Application not found'
+            };
+        }
+        // Check if there's an ACCOUNTS review with APPROVED status
+        // This represents the OWO officer's review of the accounts clearance
+        const accountsReview = application.reviews.find(review => review.section.code === 'ACCOUNTS' && review.status === 'APPROVED');
+        if (!accountsReview) {
+            return {
+                canTransition: false,
+                reason: 'Accounts review not completed'
+            };
+        }
+        return {
+            canTransition: true,
+            reason: 'Accounts review completed - ready for approval',
+            metadata: {
+                reviewId: accountsReview.id
+            }
+        };
+    }
+    catch (error) {
+        logger_1.logger.error('GUARD_OWO_ACCOUNTS_REVIEW_COMPLETE error:', error);
+        return {
+            canTransition: false,
+            reason: 'Error checking Accounts review'
+        };
+    }
+};
+exports.GUARD_OWO_ACCOUNTS_REVIEW_COMPLETE = GUARD_OWO_ACCOUNTS_REVIEW_COMPLETE;
+/**
  * GUARDS map - Central registry of all workflow guards
  */
 exports.GUARDS = {
@@ -1269,6 +1316,7 @@ exports.GUARDS = {
     GUARD_PAYMENT_VERIFIED: exports.GUARD_PAYMENT_VERIFIED,
     GUARD_ACCOUNTS_CLEAR: exports.GUARD_ACCOUNTS_CLEAR,
     GUARD_ACCOUNTS_REVIEWED: exports.GUARD_ACCOUNTS_REVIEWED,
+    GUARD_OWO_ACCOUNTS_REVIEW_COMPLETE: exports.GUARD_OWO_ACCOUNTS_REVIEW_COMPLETE,
     GUARD_APPROVAL_COMPLETE: exports.GUARD_APPROVAL_COMPLETE,
     GUARD_APPROVAL_REJECTED: exports.GUARD_APPROVAL_REJECTED,
     GUARD_DEED_FINALIZED: exports.GUARD_DEED_FINALIZED

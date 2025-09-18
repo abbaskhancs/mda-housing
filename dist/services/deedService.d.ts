@@ -1,5 +1,11 @@
 export interface DeedResult {
     transferDeed: any;
+    stageTransition?: {
+        fromStage: any;
+        toStage: any;
+        guard: string;
+        guardResult: any;
+    };
     autoTransition?: {
         fromStage: any;
         toStage: any;
@@ -9,7 +15,7 @@ export interface DeedResult {
     ownershipTransferred?: boolean;
 }
 export declare const createDeedDraft: (applicationId: string, witness1Id: string, witness2Id: string, deedContent: string | null, userId: string) => Promise<DeedResult>;
-export declare const finalizeDeed: (applicationId: string, witness1Signature: string, witness2Signature: string, userId: string) => Promise<DeedResult>;
+export declare const finalizeDeed: (applicationId: string, witness1Signature: string, witness2Signature: string, finalPdfUrl: string, userId: string) => Promise<DeedResult>;
 export declare const getTransferDeed: (applicationId: string) => Promise<({
     application: {
         seller: {
@@ -43,6 +49,7 @@ export declare const getTransferDeed: (applicationId: string) => Promise<({
             sectorNumber: string | null;
             area: import("@prisma/client/runtime/library").Decimal | null;
             location: string | null;
+            currentOwnerId: string | null;
         };
         currentStage: {
             id: string;
@@ -95,10 +102,19 @@ export declare const getTransferDeed: (applicationId: string) => Promise<({
     witness1Id: string;
     witness2Id: string;
     deedContent: string | null;
+    finalPdfUrl: string | null;
     applicationId: string;
     hashSha256: string | null;
     deedPdfUrl: string | null;
     isFinalized: boolean;
     finalizedAt: Date | null;
+    sellerPhotoUrl: string | null;
+    buyerPhotoUrl: string | null;
+    witness1PhotoUrl: string | null;
+    witness2PhotoUrl: string | null;
+    sellerSignatureUrl: string | null;
+    buyerSignatureUrl: string | null;
+    witness1SignatureUrl: string | null;
+    witness2SignatureUrl: string | null;
 }) | null>;
 export declare const updateDeedDraft: (applicationId: string, witness1Id: string | null, witness2Id: string | null, deedContent: string | null, userId: string) => Promise<DeedResult>;

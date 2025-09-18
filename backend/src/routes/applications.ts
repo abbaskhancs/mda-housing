@@ -1287,7 +1287,7 @@ router.post('/:id/transfer-deed/draft', authenticateToken, validateParams(common
     where: {
       applicationId: id,
       userId: req.user!.id,
-      action: 'DEED_DRAFT_CREATED'
+      action: 'DEED_DRAFTED'
     },
     data: {
       ipAddress: req.ip,
@@ -1356,7 +1356,7 @@ router.put('/:id/transfer-deed/draft', authenticateToken, validateParams(commonS
  */
 router.post('/:id/transfer-deed/finalize', authenticateToken, validateParams(commonSchemas.idParam), validate(transferDeedSchemas.finalize), asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { witness1Signature, witness2Signature } = req.body;
+  const { witness1Signature, witness2Signature, finalPdfUrl } = req.body;
 
   // Check if application exists
   const application = await prisma.application.findUnique({
@@ -1372,6 +1372,7 @@ router.post('/:id/transfer-deed/finalize', authenticateToken, validateParams(com
     id,
     witness1Signature,
     witness2Signature,
+    finalPdfUrl,
     req.user!.id
   );
 
@@ -1401,6 +1402,21 @@ router.post('/:id/transfer-deed/finalize', authenticateToken, validateParams(com
     }
   });
 
+  // If there was a stage transition, update its audit log too
+  if (result.stageTransition) {
+    await prisma.auditLog.updateMany({
+      where: {
+        applicationId: id,
+        userId: req.user!.id,
+        action: 'STAGE_TRANSITION'
+      },
+      data: {
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      }
+    });
+  }
+
   // If there was an auto-transition, update its audit log too
   if (result.autoTransition) {
     await prisma.auditLog.updateMany({
@@ -1416,13 +1432,98 @@ router.post('/:id/transfer-deed/finalize', authenticateToken, validateParams(com
     });
   }
 
-  logger.info(`Transfer deed finalized for application ${id} by user ${req.user!.username}. Auto-transition: ${result.autoTransition ? 'Yes' : 'No'}, Ownership transferred: ${result.ownershipTransferred ? 'Yes' : 'No'}`);
+  logger.info(`Transfer deed finalized for application ${id} by user ${req.user!.username}. Stage transition: ${result.stageTransition ? 'Yes' : 'No'}, Auto-transition: ${result.autoTransition ? 'Yes' : 'No'}, Ownership transferred: ${result.ownershipTransferred ? 'Yes' : 'No'}`);
 
   res.status(200).json({
     message: 'Transfer deed finalized successfully',
     transferDeed: result.transferDeed,
+    stageTransition: result.stageTransition,
     autoTransition: result.autoTransition,
     ownershipTransferred: result.ownershipTransferred
+  });
+}));
+
+/**
+ * POST /api/applications/:id/transfer-deed/photos-signatures
+ * Upload photos and signatures for transfer deed
+ */
+router.post('/:id/transfer-deed/photos-signatures', authenticateToken, requireRole('ADMIN', 'APPROVER'), validateParams(commonSchemas.idParam), uploadMultiple('files', 8), asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const files = req.files as Express.Multer.File[];
+
+  if (!files || files.length === 0) {
+    throw createError('No files provided', 400, 'NO_FILES');
+  }
+
+  // Use database transaction
+  const result = await prisma.$transaction(async (tx) => {
+    // Check if application exists and has transfer deed
+    const application = await tx.application.findUnique({
+      where: { id },
+      include: {
+        transferDeed: true
+      }
+    });
+
+    if (!application) {
+      throw createError('Application not found', 404, 'APPLICATION_NOT_FOUND');
+    }
+
+    if (!application.transferDeed) {
+      throw createError('Transfer deed not found', 404, 'TRANSFER_DEED_NOT_FOUND');
+    }
+
+    if (application.transferDeed.isFinalized) {
+      throw createError('Transfer deed already finalized', 400, 'DEED_ALREADY_FINALIZED');
+    }
+
+    const uploadedFiles: { [key: string]: string } = {};
+
+    // Process each file
+    for (const file of files) {
+      const fieldName = file.fieldname;
+
+      // Validate field name
+      const allowedFields = [
+        'sellerPhoto', 'buyerPhoto', 'witness1Photo', 'witness2Photo',
+        'sellerSignature', 'buyerSignature', 'witness1Signature', 'witness2Signature'
+      ];
+
+      if (!allowedFields.includes(fieldName)) {
+        throw createError(`Invalid field name: ${fieldName}`, 400, 'INVALID_FIELD');
+      }
+
+      // Validate file type (images only)
+      if (!file.mimetype.startsWith('image/')) {
+        throw createError(`Invalid file type for ${fieldName}. Only images are allowed.`, 400, 'INVALID_FILE_TYPE');
+      }
+
+      try {
+        // Upload file to storage
+        const uploadResult = await uploadFile(file, application.id, `deed_${fieldName}`);
+        uploadedFiles[`${fieldName}Url`] = uploadResult.url;
+      } catch (error) {
+        logger.error(`Error uploading file ${fieldName}:`, error);
+        throw createError(`Error uploading file ${fieldName}: ${error instanceof Error ? error.message : 'Unknown error'}`, 500, 'FILE_UPLOAD_ERROR');
+      }
+    }
+
+    // Update transfer deed with uploaded file URLs
+    const updatedTransferDeed = await tx.transferDeed.update({
+      where: { id: application.transferDeed.id },
+      data: uploadedFiles,
+      include: {
+        witness1: true,
+        witness2: true
+      }
+    });
+
+    return updatedTransferDeed;
+  });
+
+  res.json({
+    success: true,
+    data: result
   });
 }));
 

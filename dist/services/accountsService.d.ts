@@ -58,6 +58,7 @@ export declare const getAccountsBreakdown: (applicationId: string) => Promise<({
             sectorNumber: string | null;
             area: import("@prisma/client/runtime/library").Decimal | null;
             location: string | null;
+            currentOwnerId: string | null;
         };
         currentStage: {
             id: string;

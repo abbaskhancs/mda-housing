@@ -145,6 +145,7 @@ model Person {
   applicationsAsAttorney   Application[] @relation("ApplicationAttorney")
   transferDeedsAsWitness1 TransferDeed[] @relation("TransferDeedWitness1")
   transferDeedsAsWitness2 TransferDeed[] @relation("TransferDeedWitness2")
+  ownedPlots Plot[] @relation("PlotCurrentOwner")
 
   @@map("person")
 }
@@ -156,11 +157,13 @@ model Plot {
   sectorNumber String?
   area         Decimal?
   location     String?
+  currentOwnerId String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   // Relations
   applications Application[]
+  currentOwner Person? @relation("PlotCurrentOwner", fields: [currentOwnerId], references: [id])
 
   @@map("plot")
 }
@@ -308,9 +311,21 @@ model TransferDeed {
   witness2Id     String
   deedContent    String?
   deedPdfUrl     String?
+  finalPdfUrl    String?
   hashSha256     String?
   isFinalized    Boolean  @default(false)
   finalizedAt    DateTime?
+
+  // Photo and signature fields
+  sellerPhotoUrl      String?
+  buyerPhotoUrl       String?
+  witness1PhotoUrl    String?
+  witness2PhotoUrl    String?
+  sellerSignatureUrl  String?
+  buyerSignatureUrl   String?
+  witness1SignatureUrl String?
+  witness2SignatureUrl String?
+
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

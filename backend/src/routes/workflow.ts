@@ -7,6 +7,7 @@ import { workflowSchemas, commonSchemas, applicationSchemas } from '../schemas/v
 import { asyncHandler, createError } from '../middleware/errorHandler';
 import { logger } from '../config/logger';
 import { executeGuard, validateGuardContext } from '../guards/workflowGuards';
+import { documentService } from '../services/documentService';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -378,6 +379,17 @@ router.post('/applications/:id/transition', authenticateToken, validateParams(co
     }
   });
 
+  // Auto-generate dispatch memo when transitioning to READY_FOR_APPROVAL
+  if (targetStage.code === 'READY_FOR_APPROVAL') {
+    try {
+      await generateDispatchMemoOnTransition(id);
+      logger.info(`Auto-generated dispatch memo for application ${id} on transition to READY_FOR_APPROVAL`);
+    } catch (error) {
+      logger.error(`Failed to auto-generate dispatch memo for application ${id}:`, error);
+      // Don't fail the transition if memo generation fails
+    }
+  }
+
   // Create audit log
   await prisma.auditLog.create({
     data: {
@@ -489,5 +501,116 @@ router.post('/applications/:id/guard-test', authenticateToken, validateParams(co
     }
   });
 }));
+
+/**
+ * Auto-generate dispatch memo when transitioning to READY_FOR_APPROVAL
+ */
+async function generateDispatchMemoOnTransition(applicationId: string): Promise<void> {
+  try {
+    // Get application with all required data for the memo
+    const application = await prisma.application.findUnique({
+      where: { id: applicationId },
+      include: {
+        seller: true,
+        buyer: true,
+        plot: true,
+        currentStage: true,
+        attachments: true,
+        clearances: {
+          include: {
+            section: true,
+            status: true
+          }
+        },
+        reviews: {
+          include: {
+            section: true
+          }
+        },
+        accountsBreakdown: true
+      }
+    });
+
+    if (!application) {
+      throw new Error(`Application ${applicationId} not found`);
+    }
+
+    // Prepare template data for dispatch memo
+    const templateData = {
+      application: {
+        id: application.id,
+        applicationNumber: application.applicationNumber,
+        submittedAt: application.submittedAt,
+        currentStage: application.currentStage?.name || 'Unknown'
+      },
+      seller: {
+        name: application.seller.name,
+        cnic: application.seller.cnic,
+        phone: application.seller.phone,
+        address: application.seller.address
+      },
+      buyer: {
+        name: application.buyer.name,
+        cnic: application.buyer.cnic,
+        phone: application.buyer.phone,
+        address: application.buyer.address
+      },
+      plot: {
+        plotNumber: application.plot.plotNumber,
+        blockNumber: application.plot.blockNumber,
+        sectorNumber: application.plot.sectorNumber,
+        area: application.plot.area,
+        location: application.plot.location
+      },
+      attachments: application.attachments.map(att => ({
+        docType: att.docType,
+        originalSeen: att.isOriginalSeen,
+        fileName: att.fileName
+      })),
+      clearances: application.clearances.map(clearance => ({
+        sectionName: clearance.section.name,
+        status: clearance.status.code,
+        remarks: clearance.remarks,
+        clearedAt: clearance.clearedAt
+      })),
+      reviews: application.reviews.map(review => ({
+        sectionName: review.section.name,
+        status: review.status,
+        comments: review.remarks,
+        createdAt: review.createdAt,
+        reviewedAt: review.reviewedAt
+      })),
+      accountsBreakdown: application.accountsBreakdown ? {
+        arrears: application.accountsBreakdown.arrears,
+        surcharge: application.accountsBreakdown.surcharge,
+        nonUser: application.accountsBreakdown.nonUser,
+        transferFee: application.accountsBreakdown.transferFee,
+        attorneyFee: application.accountsBreakdown.attorneyFee,
+        water: application.accountsBreakdown.water,
+        suiGas: application.accountsBreakdown.suiGas,
+        additional: application.accountsBreakdown.additional,
+        totalAmount: application.accountsBreakdown.totalAmount,
+        paidAmount: application.accountsBreakdown.paidAmount,
+        remainingAmount: application.accountsBreakdown.remainingAmount,
+        paymentVerified: application.accountsBreakdown.paymentVerified
+      } : null,
+      memoId: `MEMO-${Date.now()}`,
+      memoDate: new Date()
+    };
+
+    // Generate the dispatch memo document
+    await documentService.generateDocument({
+      applicationId,
+      documentType: 'DISPATCH_MEMO',
+      templateData,
+      expiresInHours: 24 * 7 // 7 days expiry
+    });
+
+    logger.info(`Dispatch memo auto-generated for application ${applicationId}`);
+  } catch (error) {
+    logger.error(`Failed to generate dispatch memo for application ${applicationId}:`, error);
+    throw error;
+  }
+}
 
 export default router;

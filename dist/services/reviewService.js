@@ -121,6 +121,11 @@ const checkAutoTransitionAfterReview = async (applicationId, currentStageId, sec
             nextStageCode = 'OWO_REVIEW_BCA_HOUSING';
             guardName = 'GUARD_BCA_HOUSING_REVIEW';
         }
+        else if (sectionCode === 'ACCOUNTS' && currentStage.code === 'ACCOUNTS_CLEAR') {
+            // ACCOUNTS review completed - can move to OWO_REVIEW_ACCOUNTS
+            nextStageCode = 'OWO_REVIEW_ACCOUNTS';
+            guardName = 'GUARD_ACCOUNTS_REVIEWED';
+        }
         else if (sectionCode === 'APPROVER' && currentStage.code === 'READY_FOR_APPROVAL') {
             // Approver review completed - can move to APPROVED
             nextStageCode = 'APPROVED';

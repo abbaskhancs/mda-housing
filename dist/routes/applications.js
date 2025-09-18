@@ -1110,7 +1110,7 @@ router.post('/:id/transfer-deed/draft', auth_1.authenticateToken, (0, validation
         where: {
             applicationId: id,
             userId: req.user.id,
-            action: 'DEED_DRAFT_CREATED'
+            action: 'DEED_DRAFTED'
         },
         data: {
             ipAddress: req.ip,
@@ -1163,7 +1163,7 @@ router.put('/:id/transfer-deed/draft', auth_1.authenticateToken, (0, validation_
  */
 router.post('/:id/transfer-deed/finalize', auth_1.authenticateToken, (0, validation_1.validateParams)(validation_2.commonSchemas.idParam), (0, validation_1.validate)(validation_2.transferDeedSchemas.finalize), (0, errorHandler_1.asyncHandler)(async (req, res) => {
     const { id } = req.params;
-    const { witness1Signature, witness2Signature } = req.body;
+    const { witness1Signature, witness2Signature, finalPdfUrl } = req.body;
     // Check if application exists
     const application = await prisma.application.findUnique({
         where: { id }
@@ -1172,7 +1172,7 @@ router.post('/:id/transfer-deed/finalize', auth_1.authenticateToken, (0, validat
         throw (0, errorHandler_1.createError)('Application not found', 404, 'APPLICATION_NOT_FOUND');
     }
     // Finalize deed
-    const result = await (0, deedService_1.finalizeDeed)(id, witness1Signature, witness2Signature, req.user.id);
+    const result = await (0, deedService_1.finalizeDeed)(id, witness1Signature, witness2Signature, finalPdfUrl, req.user.id);
     // Update audit log with IP and user agent
     await prisma.auditLog.updateMany({
         where: {
@@ -1197,6 +1197,20 @@ router.post('/:id/transfer-deed/finalize', auth_1.authenticateToken, (0, validat
             userAgent: req.get('User-Agent')
         }
     });
+    // If there was a stage transition, update its audit log too
+    if (result.stageTransition) {
+        await prisma.auditLog.updateMany({
+            where: {
+                applicationId: id,
+                userId: req.user.id,
+                action: 'STAGE_TRANSITION'
+            },
+            data: {
+                ipAddress: req.ip,
+                userAgent: req.get('User-Agent')
+            }
+        });
+    }
     // If there was an auto-transition, update its audit log too
     if (result.autoTransition) {
         await prisma.auditLog.updateMany({
@@ -1211,12 +1225,83 @@ router.post('/:id/transfer-deed/finalize', auth_1.authenticateToken, (0, validat
             }
         });
     }
-    logger_1.logger.info(`Transfer deed finalized for application ${id} by user ${req.user.username}. Auto-transition: ${result.autoTransition ? 'Yes' : 'No'}, Ownership transferred: ${result.ownershipTransferred ? 'Yes' : 'No'}`);
+    logger_1.logger.info(`Transfer deed finalized for application ${id} by user ${req.user.username}. Stage transition: ${result.stageTransition ? 'Yes' : 'No'}, Auto-transition: ${result.autoTransition ? 'Yes' : 'No'}, Ownership transferred: ${result.ownershipTransferred ? 'Yes' : 'No'}`);
     res.status(200).json({
         message: 'Transfer deed finalized successfully',
         transferDeed: result.transferDeed,
+        stageTransition: result.stageTransition,
         autoTransition: result.autoTransition,
         ownershipTransferred: result.ownershipTransferred
+    });
+}));
+/**
+ * POST /api/applications/:id/transfer-deed/photos-signatures
+ * Upload photos and signatures for transfer deed
+ */
+router.post('/:id/transfer-deed/photos-signatures', auth_1.authenticateToken, (0, rbac_1.requireRole)('ADMIN', 'APPROVER'), (0, validation_1.validateParams)(validation_2.commonSchemas.idParam), (0, upload_1.uploadMultiple)('files', 8), (0, errorHandler_1.asyncHandler)(async (req, res) => {
+    const { id } = req.params;
+    const files = req.files;
+    if (!files || files.length === 0) {
+        throw (0, errorHandler_1.createError)('No files provided', 400, 'NO_FILES');
+    }
+    // Use database transaction
+    const result = await prisma.$transaction(async (tx) => {
+        // Check if application exists and has transfer deed
+        const application = await tx.application.findUnique({
+            where: { id },
+            include: {
+                transferDeed: true
+            }
+        });
+        if (!application) {
+            throw (0, errorHandler_1.createError)('Application not found', 404, 'APPLICATION_NOT_FOUND');
+        }
+        if (!application.transferDeed) {
+            throw (0, errorHandler_1.createError)('Transfer deed not found', 404, 'TRANSFER_DEED_NOT_FOUND');
+        }
+        if (application.transferDeed.isFinalized) {
+            throw (0, errorHandler_1.createError)('Transfer deed already finalized', 400, 'DEED_ALREADY_FINALIZED');
+        }
+        const uploadedFiles = {};
+        // Process each file
+        for (const file of files) {
+            const fieldName = file.fieldname;
+            // Validate field name
+            const allowedFields = [
+                'sellerPhoto', 'buyerPhoto', 'witness1Photo', 'witness2Photo',
+                'sellerSignature', 'buyerSignature', 'witness1Signature', 'witness2Signature'
+            ];
+            if (!allowedFields.includes(fieldName)) {
+                throw (0, errorHandler_1.createError)(`Invalid field name: ${fieldName}`, 400, 'INVALID_FIELD');
+            }
+            // Validate file type (images only)
+            if (!file.mimetype.startsWith('image/')) {
+                throw (0, errorHandler_1.createError)(`Invalid file type for ${fieldName}. Only images are allowed.`, 400, 'INVALID_FILE_TYPE');
+            }
+            try {
+                // Upload file to storage
+                const uploadResult = await (0, storage_1.uploadFile)(file, application.id, `deed_${fieldName}`);
+                uploadedFiles[`${fieldName}Url`] = uploadResult.url;
+            }
+            catch (error) {
+                logger_1.logger.error(`Error uploading file ${fieldName}:`, error);
+                throw (0, errorHandler_1.createError)(`Error uploading file ${fieldName}: ${error instanceof Error ? error.message : 'Unknown error'}`, 500, 'FILE_UPLOAD_ERROR');
+            }
+        }
+        // Update transfer deed with uploaded file URLs
+        const updatedTransferDeed = await tx.transferDeed.update({
+            where: { id: application.transferDeed.id },
+            data: uploadedFiles,
+            include: {
+                witness1: true,
+                witness2: true
+            }
+        });
+        return updatedTransferDeed;
+    });
+    res.json({
+        success: true,
+        data: result
     });
 }));
 /**

@@ -93,6 +93,10 @@ export declare const GUARD_DEED_FINALIZED: GuardFunction;
  */
 export declare const GUARD_ACCOUNTS_REVIEWED: GuardFunction;
 /**
+ * GUARD_OWO_ACCOUNTS_REVIEW_COMPLETE: Check if OWO review for Accounts is complete
+ */
+export declare const GUARD_OWO_ACCOUNTS_REVIEW_COMPLETE: GuardFunction;
+/**
  * GUARDS map - Central registry of all workflow guards
  */
 export declare const GUARDS: Record<string, GuardFunction>;

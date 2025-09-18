@@ -241,7 +241,8 @@ export const transferDeedSchemas = {
 
   finalize: z.object({
     witness1Signature: z.string().min(1, 'Witness 1 signature is required'),
-    witness2Signature: z.string().min(1, 'Witness 2 signature is required')
+    witness2Signature: z.string().min(1, 'Witness 2 signature is required'),
+    finalPdfUrl: z.string().url('Invalid final PDF URL').min(1, 'Final PDF URL is required')
   }),
 
   getById: z.object({

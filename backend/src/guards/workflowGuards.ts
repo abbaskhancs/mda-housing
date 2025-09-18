@@ -1402,6 +1402,58 @@ export const GUARD_ACCOUNTS_REVIEWED: GuardFunction = async (context: GuardConte
 };
 
 /**
+ * GUARD_OWO_ACCOUNTS_REVIEW_COMPLETE: Check if OWO review for Accounts is complete
+ */
+export const GUARD_OWO_ACCOUNTS_REVIEW_COMPLETE: GuardFunction = async (context: GuardContext): Promise<GuardResult> => {
+  try {
+    const application = await prisma.application.findUnique({
+      where: { id: context.applicationId },
+      include: {
+        reviews: {
+          include: {
+            section: true
+          }
+        }
+      }
+    });
+
+    if (!application) {
+      return {
+        canTransition: false,
+        reason: 'Application not found'
+      };
+    }
+
+    // Check if there's an ACCOUNTS review with APPROVED status
+    // This represents the OWO officer's review of the accounts clearance
+    const accountsReview = application.reviews.find(
+      review => review.section.code === 'ACCOUNTS' && review.status === 'APPROVED'
+    );
+
+    if (!accountsReview) {
+      return {
+        canTransition: false,
+        reason: 'Accounts review not completed'
+      };
+    }
+
+    return {
+      canTransition: true,
+      reason: 'Accounts review completed - ready for approval',
+      metadata: {
+        reviewId: accountsReview.id
+      }
+    };
+  } catch (error) {
+    logger.error('GUARD_OWO_ACCOUNTS_REVIEW_COMPLETE error:', error);
+    return {
+      canTransition: false,
+      reason: 'Error checking Accounts review'
+    };
+  }
+};
+
+/**
  * GUARDS map - Central registry of all workflow guards
  */
 export const GUARDS: Record<string, GuardFunction> = {
@@ -1425,6 +1477,7 @@ export const GUARDS: Record<string, GuardFunction> = {
   GUARD_PAYMENT_VERIFIED,
   GUARD_ACCOUNTS_CLEAR,
   GUARD_ACCOUNTS_REVIEWED,
+  GUARD_OWO_ACCOUNTS_REVIEW_COMPLETE,
   GUARD_APPROVAL_COMPLETE,
   GUARD_APPROVAL_REJECTED,
   GUARD_DEED_FINALIZED

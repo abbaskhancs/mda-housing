@@ -411,12 +411,15 @@ export declare const transferDeedSchemas: {
     finalize: z.ZodObject<{
         witness1Signature: z.ZodString;
         witness2Signature: z.ZodString;
+        finalPdfUrl: z.ZodString;
     }, "strip", z.ZodTypeAny, {
         witness1Signature: string;
         witness2Signature: string;
+        finalPdfUrl: string;
     }, {
         witness1Signature: string;
         witness2Signature: string;
+        finalPdfUrl: string;
     }>;
     getById: z.ZodObject<{
         id: z.ZodString;

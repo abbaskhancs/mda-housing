@@ -210,7 +210,8 @@ exports.transferDeedSchemas = {
     }),
     finalize: zod_1.z.object({
         witness1Signature: zod_1.z.string().min(1, 'Witness 1 signature is required'),
-        witness2Signature: zod_1.z.string().min(1, 'Witness 2 signature is required')
+        witness2Signature: zod_1.z.string().min(1, 'Witness 2 signature is required'),
+        finalPdfUrl: zod_1.z.string().url('Invalid final PDF URL').min(1, 'Final PDF URL is required')
     }),
     getById: zod_1.z.object({
         id: zod_1.z.string().cuid('Invalid transfer deed ID')

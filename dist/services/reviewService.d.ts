@@ -62,6 +62,7 @@ export declare const getReviewById: (reviewId: string) => Promise<({
             sectorNumber: string | null;
             area: import("@prisma/client/runtime/library").Decimal | null;
             location: string | null;
+            currentOwnerId: string | null;
         };
         currentStage: {
             id: string;

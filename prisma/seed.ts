@@ -118,11 +118,12 @@ async function main() {
     { code: 'AWAITING_PAYMENT', name: 'Awaiting Payment', sortOrder: 12 },
     { code: 'ON_HOLD_ACCOUNTS', name: 'On Hold - Accounts', sortOrder: 13 },
     { code: 'ACCOUNTS_CLEAR', name: 'Accounts Clear', sortOrder: 14 },
-    { code: 'PAYMENT_PENDING', name: 'Payment Pending', sortOrder: 15 },
-    { code: 'READY_FOR_APPROVAL', name: 'Ready for Approval', sortOrder: 16 },
-    { code: 'APPROVED', name: 'Approved', sortOrder: 17 },
-    { code: 'REJECTED', name: 'Rejected', sortOrder: 18 },
-    { code: 'COMPLETED', name: 'Completed', sortOrder: 19 },
+    { code: 'OWO_REVIEW_ACCOUNTS', name: 'OWO Review - Accounts', sortOrder: 15 },
+    { code: 'PAYMENT_PENDING', name: 'Payment Pending', sortOrder: 16 },
+    { code: 'READY_FOR_APPROVAL', name: 'Ready for Approval', sortOrder: 17 },
+    { code: 'APPROVED', name: 'Approved', sortOrder: 18 },
+    { code: 'REJECTED', name: 'Rejected', sortOrder: 19 },
+    { code: 'COMPLETED', name: 'Completed', sortOrder: 20 },
   ]
   
   for (const stage of stages) {
@@ -159,7 +160,8 @@ async function main() {
     { from: 'AWAITING_PAYMENT', to: 'ACCOUNTS_CLEAR', guard: 'GUARD_ACCOUNTS_CLEAR' },
     { from: 'AWAITING_PAYMENT', to: 'PAYMENT_PENDING', guard: 'GUARD_ACCOUNTS_CALCULATED' },
     { from: 'ON_HOLD_ACCOUNTS', to: 'ACCOUNTS_PENDING', guard: 'GUARD_ACCOUNTS_OBJECTION_RESOLVED' },
-    { from: 'ACCOUNTS_CLEAR', to: 'READY_FOR_APPROVAL', guard: 'GUARD_ACCOUNTS_REVIEWED' },
+    { from: 'ACCOUNTS_CLEAR', to: 'OWO_REVIEW_ACCOUNTS', guard: 'GUARD_ACCOUNTS_REVIEWED' },
+    { from: 'OWO_REVIEW_ACCOUNTS', to: 'READY_FOR_APPROVAL', guard: 'GUARD_OWO_ACCOUNTS_REVIEW_COMPLETE' },
     { from: 'PAYMENT_PENDING', to: 'READY_FOR_APPROVAL', guard: 'GUARD_PAYMENT_VERIFIED' },
     { from: 'READY_FOR_APPROVAL', to: 'APPROVED', guard: 'GUARD_APPROVAL_COMPLETE' },
     { from: 'READY_FOR_APPROVAL', to: 'REJECTED', guard: 'GUARD_APPROVAL_REJECTED' },

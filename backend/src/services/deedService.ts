@@ -1,12 +1,21 @@
 import { PrismaClient } from '@prisma/client';
 import { logger } from '../config/logger';
 import { executeGuard, validateGuardContext } from '../guards/workflowGuards';
+import { executeWorkflowTransition } from './workflowService';
 import crypto from 'crypto';
+import { documentService } from './documentService';
+import { PDFTemplateData } from './pdfService';
 
 const prisma = new PrismaClient();
 
 export interface DeedResult {
   transferDeed: any;
+  stageTransition?: {
+    fromStage: any;
+    toStage: any;
+    guard: string;
+    guardResult: any;
+  };
   autoTransition?: {
     fromStage: any;
     toStage: any;
@@ -60,7 +69,7 @@ export const createDeedDraft = async (
         throw new Error('Witness 2 not found');
       }
 
-      // Create transfer deed draft
+      // Create transfer deed draft (without PDF URL initially)
       const transferDeed = await tx.transferDeed.create({
         data: {
           applicationId,
@@ -80,7 +89,7 @@ export const createDeedDraft = async (
         data: {
           applicationId,
           userId,
-          action: 'DEED_DRAFT_CREATED',
+          action: 'DEED_DRAFTED',
           details: `Transfer deed draft created with witnesses: ${witness1.name}, ${witness2.name}`,
           ipAddress: undefined, // Will be set by the endpoint
           userAgent: undefined // Will be set by the endpoint
@@ -93,11 +102,77 @@ export const createDeedDraft = async (
       };
     });
 
-    logger.info(`Transfer deed draft created for application ${applicationId} by user ${userId}`);
+    // Generate and store deed draft PDF
+    try {
+      const templateData: PDFTemplateData = {
+        application: {
+          id: result.application.id,
+          applicationNumber: result.application.applicationNumber || result.application.id,
+          submittedAt: result.application.submittedAt,
+          currentStage: result.application.currentStage?.name || 'Unknown'
+        },
+        seller: {
+          name: result.application.seller.name,
+          cnic: result.application.seller.cnic,
+          phone: result.application.seller.phone,
+          address: result.application.seller.address
+        },
+        buyer: {
+          name: result.application.buyer.name,
+          cnic: result.application.buyer.cnic,
+          phone: result.application.buyer.phone,
+          address: result.application.buyer.address
+        },
+        plot: {
+          plotNumber: result.application.plot.plotNumber,
+          blockNumber: result.application.plot.blockNumber,
+          sectorNumber: result.application.plot.sectorNumber,
+          area: result.application.plot.area,
+          location: result.application.plot.location
+        },
+        transferDeed: {
+          id: result.transferDeed.id,
+          witness1Name: result.transferDeed.witness1.name,
+          witness2Name: result.transferDeed.witness2.name,
+          deedContent: result.transferDeed.deedContent,
+          isFinalized: result.transferDeed.isFinalized,
+          createdAt: result.transferDeed.createdAt,
+          hashSha256: result.transferDeed.hashSha256
+        }
+      };
 
-    return {
-      transferDeed: result.transferDeed
-    };
+      // Generate deed PDF using document service
+      const deedDocument = await documentService.generateDocument({
+        applicationId,
+        documentType: 'TRANSFER_DEED',
+        templateData,
+        expiresInHours: 24 * 7 // 7 days
+      });
+
+      // Update transfer deed with PDF URL
+      const updatedTransferDeed = await prisma.transferDeed.update({
+        where: { id: result.transferDeed.id },
+        data: { deedPdfUrl: deedDocument.downloadUrl },
+        include: {
+          witness1: true,
+          witness2: true
+        }
+      });
+
+      logger.info(`Transfer deed draft created and PDF generated for application ${applicationId} by user ${userId}`);
+
+      return {
+        transferDeed: updatedTransferDeed
+      };
+    } catch (pdfError) {
+      logger.error('Error generating deed draft PDF:', pdfError);
+      // Return the deed without PDF URL if generation fails
+      logger.info(`Transfer deed draft created for application ${applicationId} by user ${userId} (PDF generation failed)`);
+
+      return {
+        transferDeed: result.transferDeed
+      };
+    }
   } catch (error) {
     logger.error('Error creating deed draft:', error);
     throw error;
@@ -108,6 +183,7 @@ export const finalizeDeed = async (
   applicationId: string,
   witness1Signature: string,
   witness2Signature: string,
+  finalPdfUrl: string,
   userId: string
 ): Promise<DeedResult> => {
   try {
@@ -153,6 +229,7 @@ export const finalizeDeed = async (
         deedContent: application.transferDeed.deedContent,
         witness1Signature,
         witness2Signature,
+        finalPdfUrl,
         finalizedAt: new Date().toISOString()
       };
 
@@ -166,6 +243,7 @@ export const finalizeDeed = async (
         where: { id: application.transferDeed.id },
         data: {
           hashSha256: deedHash,
+          finalPdfUrl,
           isFinalized: true,
           finalizedAt: new Date(),
           updatedAt: new Date()
@@ -177,8 +255,15 @@ export const finalizeDeed = async (
       });
 
       // Transfer ownership: Update plot owner to buyer
-      // Note: This assumes we add an ownerId field to the Plot model
-      // For now, we'll create an audit log entry for the ownership transfer
+      await tx.plot.update({
+        where: { id: application.plotId },
+        data: {
+          currentOwnerId: application.buyerId,
+          updatedAt: new Date()
+        }
+      });
+
+      // Create audit log entry for the ownership transfer
       await tx.auditLog.create({
         data: {
           applicationId,
@@ -208,16 +293,36 @@ export const finalizeDeed = async (
       };
     });
 
-    // Check for auto-progress after deed finalization
+    // Transition to APPROVED stage after deed finalization
+    let stageTransition = null;
+    if (result.application.currentStage.code === 'READY_FOR_APPROVAL') {
+      const transitionResult = await executeWorkflowTransition(
+        applicationId,
+        'APPROVED',
+        userId,
+        'APPROVER', // Assume the user finalizing the deed has APPROVER role
+        { deedFinalized: true, deedHash: result.transferDeed.hashSha256 }
+      );
+
+      if (transitionResult.success) {
+        stageTransition = transitionResult.transition;
+        logger.info(`Application ${applicationId} transitioned to APPROVED after deed finalization`);
+      } else {
+        logger.warn(`Failed to transition application ${applicationId} to APPROVED: ${transitionResult.error}`);
+      }
+    }
+
+    // Check for auto-progress after deed finalization (APPROVED -> COMPLETED)
     const autoTransition = await checkAutoProgressAfterDeedFinalization(
       applicationId,
-      result.application.currentStageId
+      stageTransition ? stageTransition.toStage.id : result.application.currentStageId
     );
 
     logger.info(`Transfer deed finalized for application ${applicationId} by user ${userId}. Hash: ${result.transferDeed.hashSha256}`);
 
     return {
       transferDeed: result.transferDeed,
+      stageTransition: stageTransition || undefined,
       autoTransition,
       ownershipTransferred: true
     };
