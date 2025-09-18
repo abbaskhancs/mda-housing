@@ -49,6 +49,8 @@ export default function RegistersPage() {
     { code: 'ACCOUNTS_PENDING', name: 'Accounts Pending' },
     { code: 'READY_FOR_APPROVAL', name: 'Ready for Approval' },
     { code: 'APPROVED', name: 'Approved' },
+    { code: 'POST_ENTRIES', name: 'Post-Entries' },
+    { code: 'CLOSED', name: 'Closed' },
     { code: 'COMPLETED', name: 'Completed' },
     { code: 'ON_HOLD_BCA', name: 'On Hold (BCA)' },
     { code: 'ON_HOLD_HOUSING', name: 'On Hold (Housing)' },
@@ -176,6 +178,10 @@ export default function RegistersPage() {
         return 'bg-purple-100 text-purple-800';
       case 'APPROVED':
         return 'bg-green-100 text-green-800';
+      case 'POST_ENTRIES':
+        return 'bg-indigo-100 text-indigo-800';
+      case 'CLOSED':
+        return 'bg-gray-100 text-gray-800';
       case 'COMPLETED':
         return 'bg-blue-100 text-blue-800';
       case 'ON_HOLD_BCA':

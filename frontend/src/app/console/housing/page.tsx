@@ -14,9 +14,11 @@ import AuthGuard from "../../../components/AuthGuard";
 import { useAuth } from "../../../contexts/AuthContext";
 import { api } from "../../../services/api";
 import { Application } from "../../../types";
+import { QueueFilters, QueueFilterState } from "../../../components/QueueFilters";
 
 export default function HousingConsolePage() {
   const [applications, setApplications] = useState<Application[]>([]);
+  const [filteredApplications, setFilteredApplications] = useState<Application[]>([]);
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
   const [clearanceDecision, setClearanceDecision] = useState<'CLEAR' | 'OBJECTION' | ''>('');
   const [remarks, setRemarks] = useState('');
@@ -24,7 +26,12 @@ export default function HousingConsolePage() {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState<QueueFilterState>({
+    stage: '',
+    status: '',
+    myPending: false,
+    search: ''
+  });
 
   // Load applications on component mount
   useEffect(() => {
@@ -46,6 +53,47 @@ export default function HousingConsolePage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Apply filters to applications
+  useEffect(() => {
+    let filtered = [...applications];
+
+    // Apply search filter
+    if (filters.search) {
+      const searchTerm = filters.search.toLowerCase();
+      filtered = filtered.filter(app =>
+        app.applicationNumber.toLowerCase().includes(searchTerm) ||
+        app.seller.name.toLowerCase().includes(searchTerm) ||
+        app.buyer.name.toLowerCase().includes(searchTerm) ||
+        app.seller.cnic.toLowerCase().includes(searchTerm) ||
+        app.buyer.cnic.toLowerCase().includes(searchTerm) ||
+        app.plot.plotNumber.toLowerCase().includes(searchTerm) ||
+        (app.attorney && app.attorney.cnic.toLowerCase().includes(searchTerm))
+      );
+    }
+
+    // Apply stage filter
+    if (filters.stage) {
+      filtered = filtered.filter(app => app.currentStage.code === filters.stage);
+    }
+
+    // Apply status filter
+    if (filters.status) {
+      filtered = filtered.filter(app => app.status === filters.status);
+    }
+
+    // Apply "my pending" filter for Housing
+    if (filters.myPending) {
+      // For Housing, show applications in SENT_TO_BCA_HOUSING stage
+      filtered = filtered.filter(app => app.currentStage.code === 'SENT_TO_BCA_HOUSING');
+    }
+
+    setFilteredApplications(filtered);
+  }, [applications, filters]);
+
+  const handleFiltersChange = (newFilters: QueueFilterState) => {
+    setFilters(newFilters);
   };
 
   const handleGeneratePdf = async () => {
@@ -154,23 +202,22 @@ export default function HousingConsolePage() {
           <p className="text-gray-600 mt-2">Review and process Housing clearances for housing transfer applications</p>
         </div>
 
+        {/* Queue Filters */}
+        <div className="mb-6">
+          <QueueFilters
+            onFiltersChange={handleFiltersChange}
+            userRole="HOUSING"
+          />
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Applications List */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
-                <span>Pending Applications</span>
-                <Badge variant="secondary">{applications.length}</Badge>
+                <span>Applications Queue</span>
+                <Badge variant="secondary">{filteredApplications.length}</Badge>
               </CardTitle>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Search applications..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
             </CardHeader>
             <CardContent>
               {isLoading ? (
@@ -180,11 +227,7 @@ export default function HousingConsolePage() {
                 </div>
               ) : (
                 <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {applications.filter(app =>
-                    app.applicationNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    app.seller.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    app.buyer.name.toLowerCase().includes(searchTerm.toLowerCase())
-                  ).map((application) => (
+                  {filteredApplications.map((application) => (
                     <div
                       key={application.id}
                       className={`p-4 border rounded-lg cursor-pointer transition-colors ${

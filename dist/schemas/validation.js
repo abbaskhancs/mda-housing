@@ -127,6 +127,9 @@ exports.attachmentSchemas = {
     }),
     markOriginalSeen: zod_1.z.object({
         isOriginalSeen: zod_1.z.boolean()
+    }),
+    update: zod_1.z.object({
+        isOriginalSeen: zod_1.z.boolean()
     })
 };
 // Clearance schemas

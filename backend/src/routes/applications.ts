@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { authenticateToken } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
 import { validate, validateParams } from '../middleware/validation';
-import { applicationSchemas, commonSchemas, clearanceSchemas, accountsSchemas, reviewSchemas, transferDeedSchemas } from '../schemas/validation';
+import { applicationSchemas, commonSchemas, clearanceSchemas, accountsSchemas, reviewSchemas, transferDeedSchemas, attachmentSchemas } from '../schemas/validation';
 import { asyncHandler, createError } from '../middleware/errorHandler';
 import { logger } from '../config/logger';
 import { executeGuard, validateGuardContext } from '../guards/workflowGuards';
@@ -322,18 +322,97 @@ router.get('/:id', authenticateToken, validateParams(commonSchemas.idParam), asy
 }));
 
 /**
+ * GET /api/applications/search
+ * Global search across applications by App No, Plot, CNIC
+ */
+router.get('/search', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+  const { q, limit = '10' } = req.query;
+
+  if (!q || typeof q !== 'string' || q.trim().length < 2) {
+    return res.json({
+      applications: [],
+      message: 'Search query must be at least 2 characters'
+    });
+  }
+
+  const searchTerm = q.trim();
+  const limitNum = parseInt(limit as string) || 10;
+
+  // Search across application number, plot number, seller CNIC, buyer CNIC, attorney CNIC
+  const applications = await prisma.application.findMany({
+    where: {
+      OR: [
+        {
+          applicationNumber: {
+            contains: searchTerm,
+            mode: 'insensitive'
+          }
+        },
+        {
+          plot: {
+            plotNumber: {
+              contains: searchTerm,
+              mode: 'insensitive'
+            }
+          }
+        },
+        {
+          seller: {
+            cnic: {
+              contains: searchTerm,
+              mode: 'insensitive'
+            }
+          }
+        },
+        {
+          buyer: {
+            cnic: {
+              contains: searchTerm,
+              mode: 'insensitive'
+            }
+          }
+        },
+        {
+          attorney: {
+            cnic: {
+              contains: searchTerm,
+              mode: 'insensitive'
+            }
+          }
+        }
+      ]
+    },
+    include: {
+      seller: true,
+      buyer: true,
+      attorney: true,
+      plot: true,
+      currentStage: true
+    },
+    take: limitNum,
+    orderBy: { createdAt: 'desc' }
+  });
+
+  res.json({
+    applications,
+    searchTerm,
+    total: applications.length
+  });
+}));
+
+/**
  * GET /api/applications
  * Get applications with pagination and filtering
  */
 router.get('/', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
-  const { page = '1', limit = '10', stage, status } = req.query;
+  const { page = '1', limit = '10', stage, status, search, assignedToMe } = req.query;
   
   const pageNum = parseInt(page as string) || 1;
   const limitNum = parseInt(limit as string) || 10;
   const skip = (pageNum - 1) * limitNum;
 
   const where: any = {};
-  
+
   if (stage) {
     const stageRecord = await prisma.wfStage.findFirst({
       where: { code: stage as string }
@@ -345,6 +424,109 @@ router.get('/', authenticateToken, asyncHandler(async (req: Request, res: Respon
 
   if (status) {
     where.status = status;
+  }
+
+  // Search functionality
+  if (search && typeof search === 'string' && search.trim().length > 0) {
+    const searchTerm = search.trim();
+    where.OR = [
+      {
+        applicationNumber: {
+          contains: searchTerm,
+          mode: 'insensitive'
+        }
+      },
+      {
+        plot: {
+          plotNumber: {
+            contains: searchTerm,
+            mode: 'insensitive'
+          }
+        }
+      },
+      {
+        seller: {
+          OR: [
+            {
+              cnic: {
+                contains: searchTerm,
+                mode: 'insensitive'
+              }
+            },
+            {
+              name: {
+                contains: searchTerm,
+                mode: 'insensitive'
+              }
+            }
+          ]
+        }
+      },
+      {
+        buyer: {
+          OR: [
+            {
+              cnic: {
+                contains: searchTerm,
+                mode: 'insensitive'
+              }
+            },
+            {
+              name: {
+                contains: searchTerm,
+                mode: 'insensitive'
+              }
+            }
+          ]
+        }
+      },
+      {
+        attorney: {
+          OR: [
+            {
+              cnic: {
+                contains: searchTerm,
+                mode: 'insensitive'
+              }
+            },
+            {
+              name: {
+                contains: searchTerm,
+                mode: 'insensitive'
+              }
+            }
+          ]
+        }
+      }
+    ];
+  }
+
+  // "My pending" filter - applications assigned to current user's role
+  if (assignedToMe === 'true' && req.user) {
+    const userRole = req.user.role;
+    const roleStageMap: Record<string, string[]> = {
+      'BCA': ['SENT_TO_BCA_HOUSING'],
+      'HOUSING': ['SENT_TO_BCA_HOUSING'],
+      'ACCOUNTS': ['SENT_TO_ACCOUNTS'],
+      'APPROVER': ['APPROVED'],
+      'OWO': ['BCA_HOUSING_CLEAR', 'ACCOUNTS_CLEAR']
+    };
+
+    if (roleStageMap[userRole]) {
+      const relevantStages = await prisma.wfStage.findMany({
+        where: {
+          code: {
+            in: roleStageMap[userRole]
+          }
+        }
+      });
+
+      if (relevantStages.length > 0) {
+        where.currentStageId = {
+          in: relevantStages.map(stage => stage.id)
+        };
+      }
+    }
   }
 
   const [applications, total] = await Promise.all([
@@ -659,6 +841,160 @@ router.post('/:id/attachments', authenticateToken, validateParams(commonSchemas.
     message: 'Attachments uploaded successfully',
     application: result.application,
     attachments: result.attachments
+  });
+}));
+
+/**
+ * GET /api/applications/:id/attachments
+ * Get all attachments for an application
+ */
+router.get('/:id/attachments', authenticateToken, validateParams(commonSchemas.idParam), asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  // Check if application exists
+  const application = await prisma.application.findUnique({
+    where: { id },
+    include: {
+      attachments: {
+        include: {
+          verifiedBy: {
+            select: {
+              id: true,
+              username: true,
+              email: true
+            }
+          }
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      }
+    }
+  });
+
+  if (!application) {
+    throw createError('Application not found', 404, 'APPLICATION_NOT_FOUND');
+  }
+
+  res.json({
+    message: 'Attachments retrieved successfully',
+    attachments: application.attachments
+  });
+}));
+
+/**
+ * PUT /api/applications/:id/attachments/:attachmentId
+ * Update attachment metadata (including "Original seen" toggle)
+ */
+router.put('/:id/attachments/:attachmentId', authenticateToken, validateParams(commonSchemas.idParam), validate(attachmentSchemas.update), asyncHandler(async (req: Request, res: Response) => {
+  const { id, attachmentId } = req.params;
+  const { isOriginalSeen } = req.body;
+
+  // Validate request body
+  if (typeof isOriginalSeen !== 'boolean') {
+    throw createError('isOriginalSeen must be a boolean', 400, 'INVALID_INPUT');
+  }
+
+  const result = await prisma.$transaction(async (tx) => {
+    // Check if application and attachment exist
+    const attachment = await tx.attachment.findFirst({
+      where: {
+        id: attachmentId,
+        applicationId: id
+      }
+    });
+
+    if (!attachment) {
+      throw createError('Attachment not found', 404, 'ATTACHMENT_NOT_FOUND');
+    }
+
+    // Update attachment
+    const updatedAttachment = await tx.attachment.update({
+      where: { id: attachmentId },
+      data: {
+        isOriginalSeen,
+        verifiedById: isOriginalSeen ? req.user!.id : null,
+        verifiedAt: isOriginalSeen ? new Date() : null
+      },
+      include: {
+        verifiedBy: {
+          select: {
+            id: true,
+            username: true,
+            email: true
+          }
+        }
+      }
+    });
+
+    // Create audit log
+    await tx.auditLog.create({
+      data: {
+        applicationId: id,
+        userId: req.user!.id,
+        action: 'ATTACHMENT_UPDATED',
+        details: `Marked attachment "${attachment.originalName}" as ${isOriginalSeen ? 'original seen' : 'not verified'}`,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      }
+    });
+
+    return updatedAttachment;
+  });
+
+  logger.info(`Attachment ${attachmentId} updated by user ${req.user!.username} - Original seen: ${isOriginalSeen}`);
+
+  res.json({
+    message: 'Attachment updated successfully',
+    attachment: result
+  });
+}));
+
+/**
+ * DELETE /api/applications/:id/attachments/:attachmentId
+ * Delete an attachment
+ */
+router.delete('/:id/attachments/:attachmentId', authenticateToken, validateParams(commonSchemas.idParam), asyncHandler(async (req: Request, res: Response) => {
+  const { id, attachmentId } = req.params;
+
+  const result = await prisma.$transaction(async (tx) => {
+    // Check if application and attachment exist
+    const attachment = await tx.attachment.findFirst({
+      where: {
+        id: attachmentId,
+        applicationId: id
+      }
+    });
+
+    if (!attachment) {
+      throw createError('Attachment not found', 404, 'ATTACHMENT_NOT_FOUND');
+    }
+
+    // Delete attachment record
+    await tx.attachment.delete({
+      where: { id: attachmentId }
+    });
+
+    // Create audit log
+    await tx.auditLog.create({
+      data: {
+        applicationId: id,
+        userId: req.user!.id,
+        action: 'ATTACHMENT_DELETED',
+        details: `Deleted attachment "${attachment.originalName}" (${attachment.docType})`,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      }
+    });
+
+    return attachment;
+  });
+
+  logger.info(`Attachment ${attachmentId} deleted by user ${req.user!.username}`);
+
+  res.json({
+    message: 'Attachment deleted successfully',
+    attachment: result
   });
 }));
 

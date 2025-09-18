@@ -174,6 +174,14 @@ class ApiService {
   }
 
   // Workflow-specific methods
+  async getWorkflowStages(): Promise<ApiResponse<{ stages: Array<{ id: string; code: string; name: string; sortOrder: number }> }>> {
+    return this.request('/workflow/stages');
+  }
+
+  async getWorkflowStatuses(): Promise<ApiResponse<{ statuses: Array<{ id: string; code: string; name: string; sortOrder: number }> }>> {
+    return this.request('/workflow/statuses');
+  }
+
   async getWorkflowTransitions(fromStage: string, applicationId?: string): Promise<ApiResponse<WorkflowTransition[]>> {
     const params = new URLSearchParams();
     if (applicationId) {
@@ -200,6 +208,15 @@ class ApiService {
     });
   }
 
+  // Search methods
+  async searchApplications(query: string, limit?: number): Promise<ApiResponse<{ applications: Application[]; total: number; searchTerm: string }>> {
+    const queryParams = new URLSearchParams();
+    queryParams.append('q', query);
+    if (limit) queryParams.append('limit', limit.toString());
+
+    return this.request(`/applications/search?${queryParams.toString()}`);
+  }
+
   // Application methods
   async getApplications(params?: {
     stage?: string;
@@ -209,6 +226,7 @@ class ApiService {
     search?: string;
     dateFrom?: string;
     dateTo?: string;
+    assignedToMe?: boolean;
   }): Promise<ApiResponse<{ applications: Application[]; total: number }>> {
     const queryParams = new URLSearchParams();
     if (params?.stage) queryParams.append('stage', params.stage);
@@ -218,6 +236,7 @@ class ApiService {
     if (params?.search) queryParams.append('search', params.search);
     if (params?.dateFrom) queryParams.append('dateFrom', params.dateFrom);
     if (params?.dateTo) queryParams.append('dateTo', params.dateTo);
+    if (params?.assignedToMe) queryParams.append('assignedToMe', 'true');
 
     const queryString = queryParams.toString();
     return this.get<{ applications: Application[]; total: number }>(`/api/applications${queryString ? `?${queryString}` : ''}`);

@@ -13,9 +13,11 @@ import { FileText, Search, Download, Save, AlertCircle, CheckCircle, Loader2 } f
 import { api } from '@/services/api';
 import { Application } from '@/types';
 import { toast } from 'sonner';
+import { QueueFilters, QueueFilterState } from '@/components/QueueFilters';
 
 export default function BCAConsolePage() {
   const [applications, setApplications] = useState<Application[]>([]);
+  const [filteredApplications, setFilteredApplications] = useState<Application[]>([]);
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
   const [clearanceDecision, setClearanceDecision] = useState<'CLEAR' | 'OBJECTION' | ''>('');
   const [remarks, setRemarks] = useState('');
@@ -23,7 +25,12 @@ export default function BCAConsolePage() {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState<QueueFilterState>({
+    stage: '',
+    status: '',
+    myPending: false,
+    search: ''
+  });
 
   // Load applications on component mount
   useEffect(() => {
@@ -47,12 +54,46 @@ export default function BCAConsolePage() {
     }
   };
 
-  const filteredApplications = applications.filter(app =>
-    app.applicationNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    app.seller.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    app.buyer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    app.plot.plotNumber.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Apply filters to applications
+  useEffect(() => {
+    let filtered = [...applications];
+
+    // Apply search filter
+    if (filters.search) {
+      const searchTerm = filters.search.toLowerCase();
+      filtered = filtered.filter(app =>
+        app.applicationNumber.toLowerCase().includes(searchTerm) ||
+        app.seller.name.toLowerCase().includes(searchTerm) ||
+        app.buyer.name.toLowerCase().includes(searchTerm) ||
+        app.seller.cnic.toLowerCase().includes(searchTerm) ||
+        app.buyer.cnic.toLowerCase().includes(searchTerm) ||
+        app.plot.plotNumber.toLowerCase().includes(searchTerm) ||
+        (app.attorney && app.attorney.cnic.toLowerCase().includes(searchTerm))
+      );
+    }
+
+    // Apply stage filter
+    if (filters.stage) {
+      filtered = filtered.filter(app => app.currentStage.code === filters.stage);
+    }
+
+    // Apply status filter
+    if (filters.status) {
+      filtered = filtered.filter(app => app.status === filters.status);
+    }
+
+    // Apply "my pending" filter for BCA
+    if (filters.myPending) {
+      // For BCA, show applications in SENT_TO_BCA_HOUSING stage
+      filtered = filtered.filter(app => app.currentStage.code === 'SENT_TO_BCA_HOUSING');
+    }
+
+    setFilteredApplications(filtered);
+  }, [applications, filters]);
+
+  const handleFiltersChange = (newFilters: QueueFilterState) => {
+    setFilters(newFilters);
+  };
 
   const handleGeneratePdf = async () => {
     if (!selectedApplication) return;
@@ -163,23 +204,22 @@ export default function BCAConsolePage() {
           <p className="text-gray-600 mt-2">Review and process BCA clearances for housing transfer applications</p>
         </div>
 
+        {/* Queue Filters */}
+        <div className="mb-6">
+          <QueueFilters
+            onFiltersChange={handleFiltersChange}
+            userRole="BCA"
+          />
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Applications List */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileText className="h-5 w-5" />
-                Pending Applications ({filteredApplications.length})
+                Applications Queue ({filteredApplications.length})
               </CardTitle>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Search applications..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
             </CardHeader>
             <CardContent>
               {isLoading ? (

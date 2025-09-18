@@ -228,6 +228,13 @@ export declare const attachmentSchemas: {
     }, {
         isOriginalSeen: boolean;
     }>;
+    update: z.ZodObject<{
+        isOriginalSeen: z.ZodBoolean;
+    }, "strip", z.ZodTypeAny, {
+        isOriginalSeen: boolean;
+    }, {
+        isOriginalSeen: boolean;
+    }>;
 };
 export declare const clearanceSchemas: {
     create: z.ZodObject<{

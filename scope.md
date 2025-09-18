@@ -453,12 +453,21 @@ Milestone 4.2: ✅ Full flow click‑through in UI moves stages correctly. (Comp
 
 ---
 
-#### 17) Summary tab — live section status panel
+#### 17) Summary tab — live section status panel ✅
 
 * Implement: Compact panel showing BCA, HOUSING, ACCOUNTS status with color badges and links to their PDFs, plus latest remarks.
 * **Test & Validate**
 
   * Objection remarks visible; clicking a badge opens respective PDF; statuses update without full page reload.
+
+**COMPLETED**: ✅ Summary tab with live section status panel implemented
+- Created SectionStatusPanel component with live updates (30-second auto-refresh)
+- Displays BCA, HOUSING, ACCOUNTS sections with color-coded status badges
+- Shows latest remarks for each section (objection remarks visible)
+- PDF generation and viewing functionality (clicking badge opens respective PDF)
+- Integrated into application detail page with real API data
+- Status updates without full page reload via polling mechanism
+- Error handling and loading states implemented
 
 ---
 
@@ -469,23 +478,115 @@ Milestone 4.2: ✅ Full flow click‑through in UI moves stages correctly. (Comp
 
   * Toggling “Original seen” persists; deleted file disappears after refresh; verifier meta shows.
 
+**✅ COMPLETED - All acceptance criteria met:**
+- Database schema updated with verifier tracking fields
+- Full CRUD API endpoints implemented (GET, POST, PUT, DELETE)
+- AttachmentsGrid component created with all required functionality
+- Component integrated into application detail page
+- Verifier metadata display implemented
+- File preview and management features added
+- Audit logging and error handling implemented
+
 ---
 
-#### 19) Stage timeline (from Audit)
+#### 19) Stage timeline (from Audit) ✅ COMPLETED
 
 * Implement: Timeline component reading `AuditLog` to render stage hops with actor and timestamps.
 * **Test & Validate**
 
   * All transitions from the test case show in order; clicking a node reveals audit note.
 
+**✅ COMPLETED - All acceptance criteria met:**
+
+**StageTimeline Component Implementation:**
+- Created `StageTimeline.tsx` component that reads from AuditLog model
+- Filters relevant events (stage transitions, application creation, clearances, etc.)
+- Sorts events chronologically (oldest to newest) for proper timeline order
+- Displays each event with appropriate icons and visual styling
+- Shows actor information (username and role) for each event
+- Formats timestamps with readable date and time display
+
+**Interactive Timeline Features:**
+- Clickable timeline nodes with visual expansion indicators
+- Toggle functionality to expand/collapse audit details
+- Expandable nodes reveal full audit notes and details
+- Visual feedback for expandable vs non-expandable nodes
+- Proper accessibility with click handlers and titles
+
+**Integration and Data Flow:**
+- Integrated into application detail page audit tab
+- Updated Application interface to include auditLogs array
+- API already provides audit logs with user information and proper ordering
+- Workflow service creates detailed audit logs for stage transitions
+- Database schema supports all required timeline functionality
+
+**Visual Design:**
+- Professional timeline layout with connecting lines
+- Color-coded event types with appropriate icons
+- Responsive design that works on different screen sizes
+- Proper spacing and typography for readability
+- Summary information showing total events and last update
+
+**Acceptance Criteria Verified:**
+- ✅ All transitions show in chronological order with actor and timestamps
+- ✅ Clicking nodes reveals detailed audit notes and information
+
 ---
 
-#### 20) Global search + queues
+#### 20) Global search + queues ✅ COMPLETED
 
 * Implement: Header search across App No, Plot, CNIC; queues for each console with filters by **stage**, **status**, **my pending**.
 * **Test & Validate**
 
   * Searching CNIC or Plot lands on the right case; queues correctly filter by stage.
+
+**✅ COMPLETED - All acceptance criteria met:**
+
+**Global Search Implementation:**
+- Created comprehensive search API endpoint (`GET /api/applications/search`)
+- Searches across Application Number, Plot Number, Seller CNIC, Buyer CNIC, Attorney CNIC
+- Case-insensitive search with proper result limiting
+- Enhanced main applications endpoint with search and "assignedToMe" filtering
+
+**GlobalSearch Component:**
+- Professional header search component with debounced input (300ms)
+- Keyboard navigation support (Arrow keys, Enter, Escape)
+- Search results dropdown with highlighting of matching terms
+- Click-to-navigate functionality to application detail pages
+- Loading states and empty state handling
+- Responsive design with proper accessibility
+
+**Queue Filtering System:**
+- Created comprehensive QueueFilters component with multiple filter types
+- Stage filtering with role-based relevant stage display
+- Status filtering (Active, Pending, etc.)
+- "My Pending" toggle showing applications assigned to user's role
+- Search within queue functionality
+- Quick filter buttons for common actions
+- Expandable/collapsible filter interface with clear filters option
+
+**Console Integration:**
+- Updated BCA Console with QueueFilters integration
+- Updated Housing Console with QueueFilters integration
+- Implemented filtered applications state management
+- Role-specific filtering logic (BCA shows SENT_TO_BCA_HOUSING for "My Pending")
+- Replaced old search inputs with comprehensive filtering system
+
+**Header Integration:**
+- Integrated GlobalSearch into RoleNav component
+- Conditional rendering for logged-in users only
+- Proper positioning and responsive design
+- Enhanced header layout with better spacing
+
+**API Service Enhancements:**
+- Added searchApplications method for global search
+- Added getWorkflowStages and getWorkflowStatuses methods
+- Enhanced getApplications method with assignedToMe parameter
+- Proper TypeScript interfaces and error handling
+
+**Acceptance Criteria Verified:**
+- ✅ Searching CNIC or Plot lands on the right case (global search navigates to correct application)
+- ✅ Queues correctly filter by stage (comprehensive filtering by stage, status, and role-based assignments)
 
 ---
 

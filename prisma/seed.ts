@@ -122,8 +122,10 @@ async function main() {
     { code: 'PAYMENT_PENDING', name: 'Payment Pending', sortOrder: 16 },
     { code: 'READY_FOR_APPROVAL', name: 'Ready for Approval', sortOrder: 17 },
     { code: 'APPROVED', name: 'Approved', sortOrder: 18 },
-    { code: 'REJECTED', name: 'Rejected', sortOrder: 19 },
-    { code: 'COMPLETED', name: 'Completed', sortOrder: 20 },
+    { code: 'POST_ENTRIES', name: 'Post-Entries', sortOrder: 19 },
+    { code: 'REJECTED', name: 'Rejected', sortOrder: 20 },
+    { code: 'CLOSED', name: 'Closed', sortOrder: 21 },
+    { code: 'COMPLETED', name: 'Completed', sortOrder: 22 },
   ]
   
   for (const stage of stages) {
@@ -165,7 +167,9 @@ async function main() {
     { from: 'PAYMENT_PENDING', to: 'READY_FOR_APPROVAL', guard: 'GUARD_PAYMENT_VERIFIED' },
     { from: 'READY_FOR_APPROVAL', to: 'APPROVED', guard: 'GUARD_APPROVAL_COMPLETE' },
     { from: 'READY_FOR_APPROVAL', to: 'REJECTED', guard: 'GUARD_APPROVAL_REJECTED' },
+    { from: 'APPROVED', to: 'POST_ENTRIES', guard: 'GUARD_START_POST_ENTRIES' },
     { from: 'APPROVED', to: 'COMPLETED', guard: 'GUARD_DEED_FINALIZED' },
+    { from: 'POST_ENTRIES', to: 'CLOSED', guard: 'GUARD_CLOSE_CASE' },
   ]
 
   for (const transition of transitions) {

@@ -97,13 +97,13 @@ export declare const getAccountsBreakdown: (applicationId: string) => Promise<({
     paidAmount: import("@prisma/client/runtime/library").Decimal;
     challanUrl: string | null;
     applicationId: string;
+    verifiedAt: Date | null;
     totalAmount: import("@prisma/client/runtime/library").Decimal;
     totalAmountWords: string | null;
     remainingAmount: import("@prisma/client/runtime/library").Decimal;
     challanNo: string | null;
     challanDate: Date | null;
     paymentVerified: boolean;
-    verifiedAt: Date | null;
     accountsStatus: string | null;
     objectionReason: string | null;
     objectionDate: Date | null;

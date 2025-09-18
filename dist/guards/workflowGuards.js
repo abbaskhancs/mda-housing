@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getGuardDescription = exports.validateGuardContext = exports.getAvailableGuards = exports.executeGuard = exports.GUARDS = exports.GUARD_OWO_ACCOUNTS_REVIEW_COMPLETE = exports.GUARD_ACCOUNTS_REVIEWED = exports.GUARD_DEED_FINALIZED = exports.GUARD_SENT_TO_BCA_HOUSING = exports.GUARD_SENT_TO_ACCOUNTS = exports.GUARD_APPROVAL_REJECTED = exports.GUARD_APPROVAL_COMPLETE = exports.GUARD_ACCOUNTS_CLEAR = exports.GUARD_PAYMENT_VERIFIED = exports.GUARD_ACCOUNTS_CALCULATED = exports.GUARD_OWO_REVIEW_COMPLETE = exports.GUARD_BCA_HOUSING_REVIEW = exports.GUARD_HOUSING_RESOLVED = exports.GUARD_BCA_RESOLVED = exports.GUARD_CLEARANCES_COMPLETE = exports.GUARD_HOUSING_OBJECTION = exports.GUARD_HOUSING_CLEAR = exports.GUARD_BCA_OBJECTION = exports.GUARD_BCA_CLEAR = exports.GUARD_SCRUTINY_COMPLETE = exports.GUARD_INTAKE_COMPLETE = void 0;
+exports.getGuardDescription = exports.validateGuardContext = exports.getAvailableGuards = exports.executeGuard = exports.GUARDS = exports.GUARD_OWO_ACCOUNTS_REVIEW_COMPLETE = exports.GUARD_ACCOUNTS_REVIEWED = exports.GUARD_CLOSE_CASE = exports.GUARD_START_POST_ENTRIES = exports.GUARD_DEED_FINALIZED = exports.GUARD_SENT_TO_BCA_HOUSING = exports.GUARD_SENT_TO_ACCOUNTS = exports.GUARD_APPROVAL_REJECTED = exports.GUARD_APPROVAL_COMPLETE = exports.GUARD_ACCOUNTS_CLEAR = exports.GUARD_PAYMENT_VERIFIED = exports.GUARD_ACCOUNTS_CALCULATED = exports.GUARD_OWO_REVIEW_COMPLETE = exports.GUARD_BCA_HOUSING_REVIEW = exports.GUARD_HOUSING_RESOLVED = exports.GUARD_BCA_RESOLVED = exports.GUARD_CLEARANCES_COMPLETE = exports.GUARD_HOUSING_OBJECTION = exports.GUARD_HOUSING_CLEAR = exports.GUARD_BCA_OBJECTION = exports.GUARD_BCA_CLEAR = exports.GUARD_SCRUTINY_COMPLETE = exports.GUARD_INTAKE_COMPLETE = void 0;
 const client_1 = require("@prisma/client");
 const logger_1 = require("../config/logger");
 const prisma = new client_1.PrismaClient();
@@ -1062,6 +1062,94 @@ const GUARD_DEED_FINALIZED = async (context) => {
 };
 exports.GUARD_DEED_FINALIZED = GUARD_DEED_FINALIZED;
 /**
+ * GUARD_START_POST_ENTRIES: Check if application can start post-entries phase
+ */
+const GUARD_START_POST_ENTRIES = async (context) => {
+    try {
+        // Only APPROVER or OWO role can start post-entries
+        if (context.userRole !== 'APPROVER' && context.userRole !== 'OWO') {
+            return {
+                canTransition: false,
+                reason: 'Only APPROVER or OWO can start post-entries'
+            };
+        }
+        const application = await prisma.application.findUnique({
+            where: { id: context.applicationId },
+            include: {
+                currentStage: true
+            }
+        });
+        if (!application) {
+            return {
+                canTransition: false,
+                reason: 'Application not found'
+            };
+        }
+        if (application.currentStage.code !== 'APPROVED') {
+            return {
+                canTransition: false,
+                reason: 'Application must be in APPROVED stage'
+            };
+        }
+        return {
+            canTransition: true,
+            reason: 'Application can start post-entries'
+        };
+    }
+    catch (error) {
+        logger_1.logger.error('GUARD_START_POST_ENTRIES error:', error);
+        return {
+            canTransition: false,
+            reason: 'Error checking post-entries eligibility'
+        };
+    }
+};
+exports.GUARD_START_POST_ENTRIES = GUARD_START_POST_ENTRIES;
+/**
+ * GUARD_CLOSE_CASE: Check if case can be closed
+ */
+const GUARD_CLOSE_CASE = async (context) => {
+    try {
+        // Only APPROVER or OWO role can close case
+        if (context.userRole !== 'APPROVER' && context.userRole !== 'OWO') {
+            return {
+                canTransition: false,
+                reason: 'Only APPROVER or OWO can close case'
+            };
+        }
+        const application = await prisma.application.findUnique({
+            where: { id: context.applicationId },
+            include: {
+                currentStage: true
+            }
+        });
+        if (!application) {
+            return {
+                canTransition: false,
+                reason: 'Application not found'
+            };
+        }
+        if (application.currentStage.code !== 'POST_ENTRIES') {
+            return {
+                canTransition: false,
+                reason: 'Application must be in POST_ENTRIES stage'
+            };
+        }
+        return {
+            canTransition: true,
+            reason: 'Case can be closed'
+        };
+    }
+    catch (error) {
+        logger_1.logger.error('GUARD_CLOSE_CASE error:', error);
+        return {
+            canTransition: false,
+            reason: 'Error checking case closure eligibility'
+        };
+    }
+};
+exports.GUARD_CLOSE_CASE = GUARD_CLOSE_CASE;
+/**
  * GUARD_SET_PENDING_PAYMENT - Set accounts status to AWAITING_PAYMENT
  */
 const GUARD_SET_PENDING_PAYMENT = async (context) => {
@@ -1319,7 +1407,9 @@ exports.GUARDS = {
     GUARD_OWO_ACCOUNTS_REVIEW_COMPLETE: exports.GUARD_OWO_ACCOUNTS_REVIEW_COMPLETE,
     GUARD_APPROVAL_COMPLETE: exports.GUARD_APPROVAL_COMPLETE,
     GUARD_APPROVAL_REJECTED: exports.GUARD_APPROVAL_REJECTED,
-    GUARD_DEED_FINALIZED: exports.GUARD_DEED_FINALIZED
+    GUARD_DEED_FINALIZED: exports.GUARD_DEED_FINALIZED,
+    GUARD_START_POST_ENTRIES: exports.GUARD_START_POST_ENTRIES,
+    GUARD_CLOSE_CASE: exports.GUARD_CLOSE_CASE
 };
 /**
  * Execute a guard function by name
@@ -1383,7 +1473,9 @@ const getGuardDescription = (guardName) => {
         'GUARD_PAYMENT_VERIFIED': 'Check if payment has been verified',
         'GUARD_APPROVAL_COMPLETE': 'Check if approval has been completed',
         'GUARD_APPROVAL_REJECTED': 'Check if approval has been rejected',
-        'GUARD_DEED_FINALIZED': 'Check if transfer deed has been finalized'
+        'GUARD_DEED_FINALIZED': 'Check if transfer deed has been finalized',
+        'GUARD_START_POST_ENTRIES': 'Check if application can start post-entries phase',
+        'GUARD_CLOSE_CASE': 'Check if case can be closed'
     };
     return descriptions[guardName] || 'No description available';
 };

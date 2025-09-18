@@ -144,6 +144,10 @@ export const attachmentSchemas = {
 
   markOriginalSeen: z.object({
     isOriginalSeen: z.boolean()
+  }),
+
+  update: z.object({
+    isOriginalSeen: z.boolean()
   })
 };
 

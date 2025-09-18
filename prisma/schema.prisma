@@ -122,6 +122,7 @@ model User {
 
   // Relations
   auditLogs AuditLog[]
+  verifiedAttachments Attachment[]
 
   @@map("user")
 }
@@ -211,12 +212,15 @@ model Attachment {
   storageUrl     String
   hashSha256     String?
   isOriginalSeen Boolean  @default(false)
+  verifiedById   String?  // User who marked as original seen
+  verifiedAt     DateTime? // When it was marked as original seen
   uploadedAt     DateTime @default(now())
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   // Relations
   application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  verifiedBy  User?       @relation(fields: [verifiedById], references: [id])
 
   @@map("attachment")
 }

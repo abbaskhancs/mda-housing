@@ -620,6 +620,139 @@ router.post('/:id/attachments', auth_1.authenticateToken, (0, validation_1.valid
     });
 }));
 /**
+ * GET /api/applications/:id/attachments
+ * Get all attachments for an application
+ */
+router.get('/:id/attachments', auth_1.authenticateToken, (0, validation_1.validateParams)(validation_2.commonSchemas.idParam), (0, errorHandler_1.asyncHandler)(async (req, res) => {
+    const { id } = req.params;
+    // Check if application exists
+    const application = await prisma.application.findUnique({
+        where: { id },
+        include: {
+            attachments: {
+                include: {
+                    verifiedBy: {
+                        select: {
+                            id: true,
+                            username: true,
+                            email: true
+                        }
+                    }
+                },
+                orderBy: {
+                    createdAt: 'desc'
+                }
+            }
+        }
+    });
+    if (!application) {
+        throw (0, errorHandler_1.createError)('Application not found', 404, 'APPLICATION_NOT_FOUND');
+    }
+    res.json({
+        message: 'Attachments retrieved successfully',
+        attachments: application.attachments
+    });
+}));
+/**
+ * PUT /api/applications/:id/attachments/:attachmentId
+ * Update attachment metadata (including "Original seen" toggle)
+ */
+router.put('/:id/attachments/:attachmentId', auth_1.authenticateToken, (0, validation_1.validateParams)(validation_2.commonSchemas.idParam), (0, validation_1.validate)(validation_2.attachmentSchemas.update), (0, errorHandler_1.asyncHandler)(async (req, res) => {
+    const { id, attachmentId } = req.params;
+    const { isOriginalSeen } = req.body;
+    // Validate request body
+    if (typeof isOriginalSeen !== 'boolean') {
+        throw (0, errorHandler_1.createError)('isOriginalSeen must be a boolean', 400, 'INVALID_INPUT');
+    }
+    const result = await prisma.$transaction(async (tx) => {
+        // Check if application and attachment exist
+        const attachment = await tx.attachment.findFirst({
+            where: {
+                id: attachmentId,
+                applicationId: id
+            }
+        });
+        if (!attachment) {
+            throw (0, errorHandler_1.createError)('Attachment not found', 404, 'ATTACHMENT_NOT_FOUND');
+        }
+        // Update attachment
+        const updatedAttachment = await tx.attachment.update({
+            where: { id: attachmentId },
+            data: {
+                isOriginalSeen,
+                verifiedById: isOriginalSeen ? req.user.id : null,
+                verifiedAt: isOriginalSeen ? new Date() : null
+            },
+            include: {
+                verifiedBy: {
+                    select: {
+                        id: true,
+                        username: true,
+                        email: true
+                    }
+                }
+            }
+        });
+        // Create audit log
+        await tx.auditLog.create({
+            data: {
+                applicationId: id,
+                userId: req.user.id,
+                action: 'ATTACHMENT_UPDATED',
+                details: `Marked attachment "${attachment.originalName}" as ${isOriginalSeen ? 'original seen' : 'not verified'}`,
+                ipAddress: req.ip,
+                userAgent: req.get('User-Agent')
+            }
+        });
+        return updatedAttachment;
+    });
+    logger_1.logger.info(`Attachment ${attachmentId} updated by user ${req.user.username} - Original seen: ${isOriginalSeen}`);
+    res.json({
+        message: 'Attachment updated successfully',
+        attachment: result
+    });
+}));
+/**
+ * DELETE /api/applications/:id/attachments/:attachmentId
+ * Delete an attachment
+ */
+router.delete('/:id/attachments/:attachmentId', auth_1.authenticateToken, (0, validation_1.validateParams)(validation_2.commonSchemas.idParam), (0, errorHandler_1.asyncHandler)(async (req, res) => {
+    const { id, attachmentId } = req.params;
+    const result = await prisma.$transaction(async (tx) => {
+        // Check if application and attachment exist
+        const attachment = await tx.attachment.findFirst({
+            where: {
+                id: attachmentId,
+                applicationId: id
+            }
+        });
+        if (!attachment) {
+            throw (0, errorHandler_1.createError)('Attachment not found', 404, 'ATTACHMENT_NOT_FOUND');
+        }
+        // Delete attachment record
+        await tx.attachment.delete({
+            where: { id: attachmentId }
+        });
+        // Create audit log
+        await tx.auditLog.create({
+            data: {
+                applicationId: id,
+                userId: req.user.id,
+                action: 'ATTACHMENT_DELETED',
+                details: `Deleted attachment "${attachment.originalName}" (${attachment.docType})`,
+                ipAddress: req.ip,
+                userAgent: req.get('User-Agent')
+            }
+        });
+        return attachment;
+    });
+    logger_1.logger.info(`Attachment ${attachmentId} deleted by user ${req.user.username}`);
+    res.json({
+        message: 'Attachment deleted successfully',
+        attachment: result
+    });
+}));
+/**
  * POST /api/applications/:id/clearances
  * Create clearance for application with auto-progress logic
  */

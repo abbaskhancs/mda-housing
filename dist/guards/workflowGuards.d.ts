@@ -89,6 +89,14 @@ export declare const GUARD_SENT_TO_BCA_HOUSING: GuardFunction;
  */
 export declare const GUARD_DEED_FINALIZED: GuardFunction;
 /**
+ * GUARD_START_POST_ENTRIES: Check if application can start post-entries phase
+ */
+export declare const GUARD_START_POST_ENTRIES: GuardFunction;
+/**
+ * GUARD_CLOSE_CASE: Check if case can be closed
+ */
+export declare const GUARD_CLOSE_CASE: GuardFunction;
+/**
  * GUARD_ACCOUNTS_REVIEWED: Check if accounts have been reviewed by OWO
  */
 export declare const GUARD_ACCOUNTS_REVIEWED: GuardFunction;
