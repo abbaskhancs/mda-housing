@@ -4,6 +4,7 @@ import React from "react";
 import { useForm } from "react-hook-form";
 import AuthGuard from "@/components/AuthGuard";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLocalization } from "@/contexts/LocalizationContext";
 import { useRouter } from "next/navigation";
 
 type FormValues = {
@@ -50,24 +51,25 @@ type AttachmentRow = {
 };
 
 const allowedDocTypes = [
-  { value: "AllotmentLetter", label: "Allotment Letter / الاٹمنٹ لیٹر" },
-  { value: "PrevTransferDeed", label: "Previous Transfer Deed / سابقہ منتقلی ڈید" },
-  { value: "AttorneyDeed", label: "Attorney Deed / اٹارنی ڈید" },
-  { value: "GiftDeed", label: "Gift Deed / گفٹ ڈید" },
-  { value: "CNIC_Seller", label: "CNIC (Seller) / شناختی کارڈ (فروخت کنندہ)" },
-  { value: "CNIC_Buyer", label: "CNIC (Buyer) / شناختی کارڈ (خریدار)" },
-  { value: "CNIC_Attorney", label: "CNIC (Attorney) / شناختی کارڈ (اٹارنی)" },
-  { value: "UtilityBill_Latest", label: "Latest Utility Bill / حالیہ یوٹیلیٹی بل" },
-  { value: "NOC_BuiltStructure", label: "NOC Built Structure / تعمیر کا این او سی" },
-  { value: "Photo_Seller", label: "Photo (Seller) / تصویر (فروخت کنندہ)" },
-  { value: "Photo_Buyer", label: "Photo (Buyer) / تصویر (خریدار)" },
-  { value: "PrevChallan", label: "Previous Challan / سابقہ چالان" },
-  { value: "NOC_Water", label: "Water NOC / پانی کا این او سی" }
+  "AllotmentLetter",
+  "PrevTransferDeed",
+  "AttorneyDeed",
+  "GiftDeed",
+  "CNIC_Seller",
+  "CNIC_Buyer",
+  "CNIC_Attorney",
+  "UtilityBill_Latest",
+  "NOC_BuiltStructure",
+  "Photo_Seller",
+  "Photo_Buyer",
+  "PrevChallan",
+  "NOC_Water"
 ];
 
 export default function NewApplicationPage() {
   const router = useRouter();
   const { token } = useAuth();
+  const { t } = useLocalization();
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormValues>({
     defaultValues: {
       sellerName: "", sellerCnic: "", sellerFatherName: "", sellerAddress: "", sellerPhone: "", sellerEmail: "",
@@ -208,7 +210,7 @@ export default function NewApplicationPage() {
           buyerId: buyer.person.id,
           attorneyId: attorney?.person?.id,
           plotId: plot.plot.id,
-          waterNocRequired: data.waterNocRequired
+          waterNocRequired: values.waterNocRequired
         })
       });
 
@@ -264,151 +266,151 @@ export default function NewApplicationPage() {
   return (
     <AuthGuard>
       <div style={{ maxWidth: 900, margin: "0 auto", padding: 16 }}>
-        <h2 style={{ marginBottom: 12 }}>New Application / نئی درخواست</h2>
+        <h2 style={{ marginBottom: 12 }}>{t('form.newApplication')}</h2>
 
         <form onSubmit={handleSubmit(onSubmit)}>
           {/* Seller Information */}
           <div style={{ marginBottom: 24, padding: 16, border: "1px solid #ddd", borderRadius: 8 }}>
-            <h3 style={{ marginBottom: 16, color: "#333" }}>Seller Information / فروخت کنندہ کی معلومات</h3>
+            <h3 style={{ marginBottom: 16, color: "#333" }}>{t('form.sellerInformation')}</h3>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div>
-                <label>Name / نام *</label>
+                <label>{t('common.name')} *</label>
                 <input {...register("sellerName", { required: true })} placeholder="Full name" style={{ width: "100%", padding: 8, border: "1px solid #ccc", borderRadius: 4 }} />
-                {errors.sellerName && <span style={{ color: "#c00" }}>Required</span>}
+                {errors.sellerName && <span style={{ color: "#c00" }}>{t('common.required')}</span>}
               </div>
               <div>
-                <label>CNIC / شناختی کارڈ *</label>
+                <label>{t('common.cnic')} *</label>
                 <input {...register("sellerCnic", { required: true, pattern: /^\d{5}-\d{7}-\d{1}$/ })} placeholder="12345-1234567-1" style={{ width: "100%", padding: 8, border: "1px solid #ccc", borderRadius: 4 }} />
-                {errors.sellerCnic && <span style={{ color: "#c00" }}>Valid CNIC required (12345-1234567-1)</span>}
+                {errors.sellerCnic && <span style={{ color: "#c00" }}>{t('validation.validCnicRequired')}</span>}
               </div>
               <div>
-                <label>Father&apos;s Name / والد کا نام *</label>
-                <input {...register("sellerFatherName", { required: true })} placeholder="Father&apos;s name" style={{ width: "100%", padding: 8, border: "1px solid #ccc", borderRadius: 4 }} />
-                {errors.sellerFatherName && <span style={{ color: "#c00" }}>Required</span>}
+                <label>{t('common.fatherName')} *</label>
+                <input {...register("sellerFatherName", { required: true })} placeholder="Father's name" style={{ width: "100%", padding: 8, border: "1px solid #ccc", borderRadius: 4 }} />
+                {errors.sellerFatherName && <span style={{ color: "#c00" }}>{t('common.required')}</span>}
               </div>
               <div>
-                <label>Phone / فون *</label>
+                <label>{t('common.phone')} *</label>
                 <input {...register("sellerPhone", { required: true })} placeholder="+92-300-1234567" style={{ width: "100%", padding: 8, border: "1px solid #ccc", borderRadius: 4 }} />
-                {errors.sellerPhone && <span style={{ color: "#c00" }}>Required</span>}
+                {errors.sellerPhone && <span style={{ color: "#c00" }}>{t('common.required')}</span>}
               </div>
               <div style={{ gridColumn: "1 / -1" }}>
-                <label>Address / پتہ *</label>
+                <label>{t('common.address')} *</label>
                 <input {...register("sellerAddress", { required: true })} placeholder="Complete address" style={{ width: "100%", padding: 8, border: "1px solid #ccc", borderRadius: 4 }} />
-                {errors.sellerAddress && <span style={{ color: "#c00" }}>Required</span>}
+                {errors.sellerAddress && <span style={{ color: "#c00" }}>{t('common.required')}</span>}
               </div>
               <div>
-                <label>Email / ای میل</label>
+                <label>{t('common.email')}</label>
                 <input {...register("sellerEmail", { pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ })} placeholder="email@example.com" style={{ width: "100%", padding: 8, border: "1px solid #ccc", borderRadius: 4 }} />
-                {errors.sellerEmail && <span style={{ color: "#c00" }}>Valid email required</span>}
+                {errors.sellerEmail && <span style={{ color: "#c00" }}>{t('validation.validEmailRequired')}</span>}
               </div>
             </div>
           </div>
 
           {/* Buyer Information */}
           <div style={{ marginBottom: 24, padding: 16, border: "1px solid #ddd", borderRadius: 8 }}>
-            <h3 style={{ marginBottom: 16, color: "#333" }}>Buyer Information / خریدار کی معلومات</h3>
+            <h3 style={{ marginBottom: 16, color: "#333" }}>{t('form.buyerInformation')}</h3>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div>
-                <label>Name / نام *</label>
+                <label>{t('common.name')} *</label>
                 <input {...register("buyerName", { required: true })} placeholder="Full name" style={{ width: "100%", padding: 8, border: "1px solid #ccc", borderRadius: 4 }} />
-                {errors.buyerName && <span style={{ color: "#c00" }}>Required</span>}
+                {errors.buyerName && <span style={{ color: "#c00" }}>{t('common.required')}</span>}
               </div>
               <div>
-                <label>CNIC / شناختی کارڈ *</label>
+                <label>{t('common.cnic')} *</label>
                 <input {...register("buyerCnic", { required: true, pattern: /^\d{5}-\d{7}-\d{1}$/ })} placeholder="12345-1234567-2" style={{ width: "100%", padding: 8, border: "1px solid #ccc", borderRadius: 4 }} />
-                {errors.buyerCnic && <span style={{ color: "#c00" }}>Valid CNIC required (12345-1234567-1)</span>}
+                {errors.buyerCnic && <span style={{ color: "#c00" }}>{t('validation.validCnicRequired')}</span>}
               </div>
               <div>
-                <label>Father&apos;s Name / والد کا نام *</label>
-                <input {...register("buyerFatherName", { required: true })} placeholder="Father&apos;s name" style={{ width: "100%", padding: 8, border: "1px solid #ccc", borderRadius: 4 }} />
-                {errors.buyerFatherName && <span style={{ color: "#c00" }}>Required</span>}
+                <label>{t('common.fatherName')} *</label>
+                <input {...register("buyerFatherName", { required: true })} placeholder="Father's name" style={{ width: "100%", padding: 8, border: "1px solid #ccc", borderRadius: 4 }} />
+                {errors.buyerFatherName && <span style={{ color: "#c00" }}>{t('common.required')}</span>}
               </div>
               <div>
-                <label>Phone / فون *</label>
+                <label>{t('common.phone')} *</label>
                 <input {...register("buyerPhone", { required: true })} placeholder="+92-301-7654321" style={{ width: "100%", padding: 8, border: "1px solid #ccc", borderRadius: 4 }} />
-                {errors.buyerPhone && <span style={{ color: "#c00" }}>Required</span>}
+                {errors.buyerPhone && <span style={{ color: "#c00" }}>{t('common.required')}</span>}
               </div>
               <div style={{ gridColumn: "1 / -1" }}>
-                <label>Address / پتہ *</label>
+                <label>{t('common.address')} *</label>
                 <input {...register("buyerAddress", { required: true })} placeholder="Complete address" style={{ width: "100%", padding: 8, border: "1px solid #ccc", borderRadius: 4 }} />
-                {errors.buyerAddress && <span style={{ color: "#c00" }}>Required</span>}
+                {errors.buyerAddress && <span style={{ color: "#c00" }}>{t('common.required')}</span>}
               </div>
               <div>
-                <label>Email / ای میل</label>
+                <label>{t('common.email')}</label>
                 <input {...register("buyerEmail", { pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ })} placeholder="email@example.com" style={{ width: "100%", padding: 8, border: "1px solid #ccc", borderRadius: 4 }} />
-                {errors.buyerEmail && <span style={{ color: "#c00" }}>Valid email required</span>}
+                {errors.buyerEmail && <span style={{ color: "#c00" }}>{t('validation.validEmailRequired')}</span>}
               </div>
             </div>
           </div>
 
           {/* Attorney Information */}
           <div style={{ marginBottom: 24, padding: 16, border: "1px solid #ddd", borderRadius: 8 }}>
-            <h3 style={{ marginBottom: 16, color: "#333" }}>Attorney Information (Optional) / اٹارنی کی معلومات (اختیاری)</h3>
+            <h3 style={{ marginBottom: 16, color: "#333" }}>{t('form.attorneyInformation')}</h3>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div>
-                <label>Name / نام</label>
+                <label>{t('common.name')}</label>
                 <input {...register("attorneyName")} placeholder="Full name" style={{ width: "100%", padding: 8, border: "1px solid #ccc", borderRadius: 4 }} />
               </div>
               <div>
-                <label>CNIC / شناختی کارڈ</label>
+                <label>{t('common.cnic')}</label>
                 <input {...register("attorneyCnic", { pattern: /^\d{5}-\d{7}-\d{1}$/ })} placeholder="12345-1234567-3" style={{ width: "100%", padding: 8, border: "1px solid #ccc", borderRadius: 4 }} />
-                {errors.attorneyCnic && <span style={{ color: "#c00" }}>Valid CNIC required (12345-1234567-1)</span>}
+                {errors.attorneyCnic && <span style={{ color: "#c00" }}>{t('validation.validCnicRequired')}</span>}
               </div>
               <div>
-                <label>Father&apos;s Name / والد کا نام</label>
-                <input {...register("attorneyFatherName")} placeholder="Father&apos;s name" style={{ width: "100%", padding: 8, border: "1px solid #ccc", borderRadius: 4 }} />
+                <label>{t('common.fatherName')}</label>
+                <input {...register("attorneyFatherName")} placeholder="Father's name" style={{ width: "100%", padding: 8, border: "1px solid #ccc", borderRadius: 4 }} />
               </div>
               <div>
-                <label>Phone / فون</label>
+                <label>{t('common.phone')}</label>
                 <input {...register("attorneyPhone")} placeholder="+92-302-9876543" style={{ width: "100%", padding: 8, border: "1px solid #ccc", borderRadius: 4 }} />
               </div>
               <div style={{ gridColumn: "1 / -1" }}>
-                <label>Address / پتہ</label>
+                <label>{t('common.address')}</label>
                 <input {...register("attorneyAddress")} placeholder="Complete address" style={{ width: "100%", padding: 8, border: "1px solid #ccc", borderRadius: 4 }} />
               </div>
               <div>
-                <label>Email / ای میل</label>
+                <label>{t('common.email')}</label>
                 <input {...register("attorneyEmail", { pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ })} placeholder="email@example.com" style={{ width: "100%", padding: 8, border: "1px solid #ccc", borderRadius: 4 }} />
-                {errors.attorneyEmail && <span style={{ color: "#c00" }}>Valid email required</span>}
+                {errors.attorneyEmail && <span style={{ color: "#c00" }}>{t('validation.validEmailRequired')}</span>}
               </div>
             </div>
           </div>
 
           {/* Plot Information */}
           <div style={{ marginBottom: 24, padding: 16, border: "1px solid #ddd", borderRadius: 8 }}>
-            <h3 style={{ marginBottom: 16, color: "#333" }}>Property Information / جائیداد کی معلومات</h3>
+            <h3 style={{ marginBottom: 16, color: "#333" }}>{t('form.propertyInformation')}</h3>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div>
-                <label>Plot Number / پلاٹ نمبر *</label>
+                <label>{t('form.plotNumber')} *</label>
                 <input {...register("plotNumber", { required: true })} placeholder="P-001" style={{ width: "100%", padding: 8, border: "1px solid #ccc", borderRadius: 4 }} />
-                {errors.plotNumber && <span style={{ color: "#c00" }}>Required</span>}
+                {errors.plotNumber && <span style={{ color: "#c00" }}>{t('common.required')}</span>}
               </div>
               <div>
-                <label>Block Number / بلاک نمبر *</label>
+                <label>{t('form.blockNumber')} *</label>
                 <input {...register("blockNumber", { required: true })} placeholder="B-01" style={{ width: "100%", padding: 8, border: "1px solid #ccc", borderRadius: 4 }} />
-                {errors.blockNumber && <span style={{ color: "#c00" }}>Required</span>}
+                {errors.blockNumber && <span style={{ color: "#c00" }}>{t('common.required')}</span>}
               </div>
               <div>
-                <label>Sector Number / سیکٹر نمبر *</label>
+                <label>{t('form.sectorNumber')} *</label>
                 <input {...register("sectorNumber", { required: true })} placeholder="S-01" style={{ width: "100%", padding: 8, border: "1px solid #ccc", borderRadius: 4 }} />
-                {errors.sectorNumber && <span style={{ color: "#c00" }}>Required</span>}
+                {errors.sectorNumber && <span style={{ color: "#c00" }}>{t('common.required')}</span>}
               </div>
               <div>
-                <label>Area (sq ft) / رقبہ (مربع فٹ) *</label>
+                <label>{t('form.area')} *</label>
                 <input {...register("plotArea", { required: true, pattern: /^\d+(\.\d+)?$/ })} placeholder="500" style={{ width: "100%", padding: 8, border: "1px solid #ccc", borderRadius: 4 }} />
-                {errors.plotArea && <span style={{ color: "#c00" }}>Valid area required</span>}
+                {errors.plotArea && <span style={{ color: "#c00" }}>{t('validation.validAreaRequired')}</span>}
               </div>
               <div style={{ gridColumn: "1 / -1" }}>
-                <label>Location / مقام *</label>
+                <label>{t('form.location')} *</label>
                 <input {...register("plotLocation", { required: true })} placeholder="Sector 1, Block 1, Plot 1" style={{ width: "100%", padding: 8, border: "1px solid #ccc", borderRadius: 4 }} />
-                {errors.plotLocation && <span style={{ color: "#c00" }}>Required</span>}
+                {errors.plotLocation && <span style={{ color: "#c00" }}>{t('common.required')}</span>}
               </div>
             </div>
           </div>
 
           {/* Water NOC Requirement */}
           <div style={{ marginBottom: 24, padding: 16, border: "1px solid #ddd", borderRadius: 8, backgroundColor: "#f8f9fa" }}>
-            <h3 style={{ marginBottom: 16, color: "#333" }}>Water NOC Requirement / واٹر NOC کی ضرورت</h3>
+            <h3 style={{ marginBottom: 16, color: "#333" }}>{t('form.waterNocRequirement')}</h3>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <input
                 type="checkbox"
@@ -417,31 +419,27 @@ export default function NewApplicationPage() {
                 style={{ width: 18, height: 18 }}
               />
               <label htmlFor="waterNocRequired" style={{ fontSize: 16, cursor: "pointer" }}>
-                Water NOC required? / کیا واٹر NOC درکار ہے؟
+                {t('form.waterNocRequired')}
               </label>
             </div>
-            <p style={{ marginTop: 8, fontSize: 14, color: "#666", fontStyle: "italic" }}>
-              Check this box if the property requires Water Department clearance /
-              اگر پراپرٹی کو واٹر ڈیپارٹمنٹ کلیئرنس کی ضرورت ہے تو یہ باکس چیک کریں
-            </p>
           </div>
 
           <div style={{ marginTop: 24 }}>
-            <h3 style={{ marginBottom: 8 }}>Attachments / منسلکات</h3>
+            <h3 style={{ marginBottom: 8 }}>{t('form.attachments')}</h3>
             <div role="table" style={{ width: "100%", border: "1px solid #ddd" }}>
               <div role="row" style={{ display: "grid", gridTemplateColumns: "2fr 3fr 1fr 60px", gap: 8, padding: 8, background: "#f8f8f8", fontWeight: 600 }}>
-                <div>Doc Type / دستاویز</div>
-                <div>File / فائل</div>
-                <div>Original seen / اصلی دیکھا گیا</div>
+                <div>{t('form.docType')}</div>
+                <div>{t('form.file')}</div>
+                <div>{t('form.originalSeen')}</div>
                 <div></div>
               </div>
               {attachments.map(row => (
                 <div key={row.id} role="row" style={{ display: "grid", gridTemplateColumns: "2fr 3fr 1fr 60px", gap: 8, padding: 8, alignItems: "center" }}>
                   <div>
                     <select value={row.docType} onChange={(e) => updateRow(row.id, { docType: e.target.value })} style={{ width: "100%" }}>
-                      <option value="">Select / منتخب کریں</option>
-                      {allowedDocTypes.map(opt => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      <option value="">{t('form.select')}</option>
+                      {allowedDocTypes.map(docType => (
+                        <option key={docType} value={docType}>{t(`docType.${docType}`)}</option>
                       ))}
                     </select>
                   </div>
@@ -458,7 +456,7 @@ export default function NewApplicationPage() {
               ))}
             </div>
             <div style={{ marginTop: 8 }}>
-              <button type="button" onClick={addRow}>+ Add row / قطار شامل کریں</button>
+              <button type="button" onClick={addRow}>{t('form.addRow')}</button>
             </div>
           </div>
 
@@ -474,7 +472,7 @@ export default function NewApplicationPage() {
               border: "1px solid #c3e6cb"
             }}>
               <h4 style={{ margin: "0 0 8px 0", fontSize: 16 }}>
-                ✅ Application Created Successfully! / درخواست کامیابی سے بن گئی!
+                ✅ {t('success.applicationCreated')}
               </h4>
               <p style={{ margin: "4px 0", fontSize: 14 }}>
                 <strong>Application No:</strong> {successData.applicationNumber}
@@ -491,21 +489,21 @@ export default function NewApplicationPage() {
                       fontSize: 14
                     }}
                   >
-                    📄 Download Intake Receipt PDF / رسید ڈاؤن لوڈ کریں
+                    📄 {t('success.downloadReceipt')}
                   </a>
                 </p>
               )}
               <p style={{ margin: "8px 0 0 0", fontSize: 12, fontStyle: "italic" }}>
-                Redirecting to application details in 3 seconds...
+                {t('success.redirecting')}
               </p>
             </div>
           )}
 
           <div style={{ marginTop: 24, display: "flex", gap: 12 }}>
             <button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Submitting…" : "Create Application / درخواست بنائیں"}
+              {isSubmitting ? t('form.submitting') : t('form.createApplication')}
             </button>
-            <button type="button" onClick={() => router.back()} disabled={isSubmitting}>Cancel / منسوخ کریں</button>
+            <button type="button" onClick={() => router.back()} disabled={isSubmitting}>{t('common.cancel')}</button>
           </div>
         </form>
       </div>

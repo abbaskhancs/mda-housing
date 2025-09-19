@@ -15,6 +15,7 @@ type AuthContextValue = {
 	isAuthenticated: boolean;
 	login: (params: { username: string; password: string }) => Promise<{ success: true } | { success: false; error: string }>;
 	logout: () => void;
+	switchRole: (role: string) => void;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -73,13 +74,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 		}
 	}, []);
 
+	const switchRole = useCallback((role: string) => {
+		if (user) {
+			const updatedUser = { ...user, role };
+			setUser(updatedUser);
+			if (typeof window !== "undefined") {
+				window.localStorage.setItem("auth_user", JSON.stringify(updatedUser));
+			}
+		}
+	}, [user]);
+
 	const value = useMemo<AuthContextValue>(() => ({
 		user,
 		token,
 		isAuthenticated: Boolean(token && user),
 		login,
-		logout
-	}), [user, token, login, logout]);
+		logout,
+		switchRole
+	}), [user, token, login, logout, switchRole]);
 
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

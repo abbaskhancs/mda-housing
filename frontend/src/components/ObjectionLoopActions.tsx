@@ -6,14 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Textarea } from './ui/textarea';
 import { Label } from './ui/label';
-import { apiService } from '../services/api';
+import { apiService, ErrorDetails } from '../services/api';
 import { Application } from '../types';
-import { 
-  ExclamationTriangleIcon, 
-  ArrowPathIcon, 
+import ErrorBanner from './ErrorBanner';
+import {
+  ExclamationTriangleIcon,
+  ArrowPathIcon,
   DocumentPlusIcon,
-  CheckCircleIcon,
-  Loader2
+  CheckCircleIcon
 } from '@heroicons/react/24/outline';
 
 interface ObjectionLoopActionsProps {
@@ -41,6 +41,7 @@ export default function ObjectionLoopActions({
   const [remarks, setRemarks] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorDetails, setErrorDetails] = useState<ErrorDetails | undefined>(undefined);
   const [availableActions, setAvailableActions] = useState<ActionOption[]>([]);
 
   useEffect(() => {
@@ -111,6 +112,7 @@ export default function ObjectionLoopActions({
 
     setIsProcessing(true);
     setError(null);
+    setErrorDetails(undefined);
 
     try {
       // Get the target stage ID
@@ -144,10 +146,12 @@ export default function ObjectionLoopActions({
           onTransition();
         }
       } else {
-        throw new Error(response.error || 'Transition failed');
+        setError(response.error || 'Transition failed');
+        setErrorDetails(response.errorDetails);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error occurred');
+      setErrorDetails(undefined);
     } finally {
       setIsProcessing(false);
     }
@@ -252,9 +256,22 @@ export default function ObjectionLoopActions({
 
         {/* Error Display */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-md p-3">
-            <div className="text-red-800 text-sm">{error}</div>
-          </div>
+          <ErrorBanner
+            error={error}
+            details={errorDetails}
+            onRetry={() => {
+              setError(null);
+              setErrorDetails(undefined);
+            }}
+            onReload={() => {
+              if (errorDetails?.statusCode === 409) {
+                window.location.reload();
+              } else {
+                setError(null);
+                setErrorDetails(undefined);
+              }
+            }}
+          />
         )}
 
         {/* Submit Button */}
@@ -264,7 +281,7 @@ export default function ObjectionLoopActions({
           className="w-full"
         >
           {isProcessing ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            <div className="h-4 w-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
           ) : (
             <CheckCircleIcon className="h-4 w-4 mr-2" />
           )}

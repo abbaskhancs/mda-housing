@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "../contexts/AuthContext";
+import { LocalizationProvider } from "../contexts/LocalizationContext";
 import RoleNav from "../components/RoleNav";
 import Sidebar from "../components/Sidebar";
 
@@ -30,17 +31,19 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <AuthProvider>
-          <div className="h-screen flex overflow-hidden bg-gray-100">
-            <Sidebar />
-            <div className="flex flex-col w-0 flex-1 overflow-hidden">
-              <RoleNav />
-              <main className="flex-1 relative overflow-y-auto focus:outline-none">
-                {children}
-              </main>
+        <LocalizationProvider>
+          <AuthProvider>
+            <div className="h-screen flex overflow-hidden bg-gray-100">
+              <Sidebar />
+              <div className="flex flex-col w-0 flex-1 overflow-hidden">
+                <RoleNav />
+                <main className="flex-1 relative overflow-y-auto focus:outline-none">
+                  {children}
+                </main>
+              </div>
             </div>
-          </div>
-        </AuthProvider>
+          </AuthProvider>
+        </LocalizationProvider>
       </body>
     </html>
   );

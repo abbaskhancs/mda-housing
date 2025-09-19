@@ -1,19 +1,21 @@
 "use client";
 import AuthGuard from "../components/AuthGuard";
 import { useAuth } from "../contexts/AuthContext";
+import { useLocalization } from "../contexts/LocalizationContext";
 import Link from "next/link";
 
 export default function Home() {
   const { user } = useAuth();
+  const { t } = useLocalization();
 
   return (
     <AuthGuard>
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
           <div className="py-4">
-            <h1 className="text-3xl font-bold text-gray-900">Welcome to MDA Housing</h1>
+            <h1 className="text-3xl font-bold text-gray-900">{t('home.welcome')}</h1>
             <p className="mt-1 text-lg text-gray-500">
-              Housing Transfer Workflow Management System
+              {t('home.subtitle')}
             </p>
           </div>
 

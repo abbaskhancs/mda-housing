@@ -5,11 +5,20 @@
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
+export interface ErrorDetails {
+  code?: string;
+  guard?: string;
+  reason?: string;
+  metadata?: any;
+  statusCode?: number;
+}
+
 export interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
   error?: string;
   message?: string;
+  errorDetails?: ErrorDetails;
 }
 
 export interface GuardResult {
@@ -90,12 +99,24 @@ class ApiService {
   private async handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
     try {
       const data = await response.json();
-      
+
       if (!response.ok) {
+        // Parse error details for better error handling
+        const errorDetails: ErrorDetails = {
+          statusCode: response.status,
+          code: data.code,
+          ...(data.details && {
+            guard: data.details.guard,
+            reason: data.details.reason,
+            metadata: data.details.metadata
+          })
+        };
+
         return {
           success: false,
           error: data.error || data.message || `HTTP ${response.status}`,
-          data: data
+          data: data,
+          errorDetails
         };
       }
 

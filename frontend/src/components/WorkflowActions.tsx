@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { apiService, WorkflowTransition } from '../services/api';
+import { apiService, WorkflowTransition, ErrorDetails } from '../services/api';
 import { ExclamationTriangleIcon, CheckCircleIcon, ClockIcon } from '@heroicons/react/24/outline';
+import ErrorBanner from './ErrorBanner';
 
 interface WorkflowActionsProps {
   applicationId: string;
@@ -27,6 +28,7 @@ export default function WorkflowActions({
   const [actions, setActions] = useState<ActionButton[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errorDetails, setErrorDetails] = useState<ErrorDetails | undefined>(undefined);
   const [transitioning, setTransitioning] = useState<string | null>(null);
 
   useEffect(() => {
@@ -36,6 +38,7 @@ export default function WorkflowActions({
   const loadAvailableActions = async () => {
     setLoading(true);
     setError(null);
+    setErrorDetails(undefined);
 
     try {
       // Get available transitions for current stage
@@ -43,6 +46,7 @@ export default function WorkflowActions({
       
       if (!transitionsResponse.success) {
         setError(transitionsResponse.error || 'Failed to load transitions');
+        setErrorDetails(transitionsResponse.errorDetails);
         return;
       }
 
@@ -92,6 +96,7 @@ export default function WorkflowActions({
       setActions(actionButtons);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error occurred');
+      setErrorDetails(undefined);
     } finally {
       setLoading(false);
     }
@@ -122,9 +127,11 @@ export default function WorkflowActions({
         await loadAvailableActions();
       } else {
         setError(response.error || 'Transition failed');
+        setErrorDetails(response.errorDetails);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Transition failed');
+      setErrorDetails(undefined);
     } finally {
       setTransitioning(null);
     }
@@ -174,24 +181,24 @@ export default function WorkflowActions({
   }
 
   if (error) {
+    const handleReload = () => {
+      // For 409 conflicts, reload the entire page to get fresh data
+      if (errorDetails?.statusCode === 409) {
+        window.location.reload();
+      } else {
+        loadAvailableActions();
+      }
+    };
+
     return (
       <div className={`bg-white shadow rounded-lg p-6 ${className}`}>
         <h3 className="text-lg font-medium text-gray-900 mb-4">Available Actions</h3>
-        <div className="bg-red-50 border border-red-200 rounded-md p-4">
-          <div className="flex">
-            <ExclamationTriangleIcon className="h-5 w-5 text-red-400" />
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-red-800">Error Loading Actions</h3>
-              <p className="mt-1 text-sm text-red-700">{error}</p>
-              <button
-                onClick={loadAvailableActions}
-                className="mt-2 text-sm text-red-600 hover:text-red-500 underline"
-              >
-                Try again
-              </button>
-            </div>
-          </div>
-        </div>
+        <ErrorBanner
+          error={error}
+          details={errorDetails}
+          onRetry={loadAvailableActions}
+          onReload={handleReload}
+        />
       </div>
     );
   }

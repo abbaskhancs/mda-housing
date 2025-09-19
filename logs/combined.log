@@ -1550,3 +1550,11 @@
 {"level":"info","message":"🚀 MDA Housing API server running on port 3001","service":"mda-housing-api","timestamp":"2025-09-18T11:10:31.683Z"}
 {"level":"info","message":"📊 Health check available at http://localhost:3001/health","service":"mda-housing-api","timestamp":"2025-09-18T11:10:31.715Z"}
 {"level":"info","message":"🌍 Environment: development","service":"mda-housing-api","timestamp":"2025-09-18T11:10:31.721Z"}
+{"level":"info","message":"🚀 MDA Housing API server running on port 3001","service":"mda-housing-api","timestamp":"2025-09-19T05:41:41.734Z"}
+{"level":"info","message":"📊 Health check available at http://localhost:3001/health","service":"mda-housing-api","timestamp":"2025-09-19T05:41:41.738Z"}
+{"level":"info","message":"🌍 Environment: development","service":"mda-housing-api","timestamp":"2025-09-19T05:41:41.738Z"}
+{"level":"info","message":"🚀 MDA Housing API server running on port 3001","service":"mda-housing-api","timestamp":"2025-09-19T05:42:38.064Z"}
+{"level":"info","message":"📊 Health check available at http://localhost:3001/health","service":"mda-housing-api","timestamp":"2025-09-19T05:42:38.069Z"}
+{"level":"info","message":"🌍 Environment: development","service":"mda-housing-api","timestamp":"2025-09-19T05:42:38.070Z"}
+{"level":"info","message":"User owo@mda.gov.pk logged in successfully","service":"mda-housing-api","timestamp":"2025-09-19T05:44:37.485Z"}
+{"error":"Transition not allowed: Missing required documents: AllotmentLetter, PrevTransferDeed, CNIC_Seller, CNIC_Buyer, UtilityBill_Latest, Photo_Seller, Photo_Buyer","ip":"::1","level":"error","message":"Error occurred:","method":"POST","service":"mda-housing-api","stack":"Error: Transition not allowed: Missing required documents: AllotmentLetter, PrevTransferDeed, CNIC_Seller, CNIC_Buyer, UtilityBill_Latest, Photo_Seller, Photo_Buyer\n    at createError (C:\\Abbas\\Coding\\MDA_Housing\\backend\\src\\middleware\\errorHandler.ts:28:10)\n    at C:\\Abbas\\Coding\\MDA_Housing\\backend\\src\\routes\\workflow.ts:365:22","timestamp":"2025-09-19T05:44:37.703Z","url":"/api/workflow/applications/cmfp8epw10042u6wc9jihbqoz/transition","userAgent":"axios/1.12.2"}

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { CurrencyDollarIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline';
 import apiService from '../services/api';
 import { formatCurrency, formatCurrencyInWordsHelper } from '../utils/numberToWords';
+import PrintControls, { PrintOption } from './PrintControls';
 
 interface FeeHeads {
   arrears: number;
@@ -54,6 +55,30 @@ const AccountsTab: React.FC<AccountsTabProps> = ({ applicationId }) => {
   });
   const [calculatedTotal, setCalculatedTotal] = useState(0);
   const [calculatedWords, setCalculatedWords] = useState('');
+
+  const getPrintOptions = (): PrintOption[] => {
+    const options: PrintOption[] = [];
+
+    // Add challan PDF if available
+    if (accountsBreakdown?.challanUrl) {
+      options.push({
+        id: 'accounts-challan',
+        label: 'Print Challan',
+        type: 'server-pdf',
+        pdfUrl: accountsBreakdown.challanUrl
+      });
+    }
+
+    // Add fallback client print
+    options.push({
+      id: 'accounts-print',
+      label: 'Print Accounts View',
+      type: 'client-print',
+      printElementId: 'accounts-content'
+    });
+
+    return options;
+  };
 
   useEffect(() => {
     fetchAccountsBreakdown();
@@ -191,9 +216,19 @@ const AccountsTab: React.FC<AccountsTabProps> = ({ applicationId }) => {
   }
 
   return (
-    <div className="bg-white shadow rounded-lg p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="text-lg font-medium text-gray-900">Accounts Breakdown</h3>
+    <div className="space-y-6">
+      {/* Print Controls */}
+      <div className="flex justify-end">
+        <PrintControls
+          applicationId={applicationId}
+          tabId="accounts"
+          options={getPrintOptions()}
+        />
+      </div>
+
+      <div id="accounts-content" data-tab="accounts" className="bg-white shadow rounded-lg p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-lg font-medium text-gray-900">Accounts Breakdown</h3>
         <div className="flex space-x-3">
           {!editing && (
             <button
@@ -336,6 +371,7 @@ const AccountsTab: React.FC<AccountsTabProps> = ({ applicationId }) => {
           )}
         </div>
       )}
+      </div>
     </div>
   );
 };

@@ -672,50 +672,187 @@ Milestone 4.2: ✅ Full flow click‑through in UI moves stages correctly. (Comp
 
 ---
 
-#### 26) Print controls (per-tab)
+#### 26) Print controls (per-tab) ✅
 
-* Implement: **Print** actions for each tab with server PDF where available; fallback to client print of a read view.
-* **Test & Validate**
+* ✅ Implement: **Print** actions for each tab with server PDF where available; fallback to client print of a read view.
+* ✅ **Test & Validate**
 
-  * Printing Clearances uses server PDF; printing Accounts uses challan/clearance PDFs; layout is A4.
+  * ✅ Printing Clearances uses server PDF; printing Accounts uses challan/clearance PDFs; layout is A4.
 
----
-
-#### 27) Role switch & RBAC UX (frontend only)
-
-* Implement: Simple role switcher (top-right) to simulate logging as OWO/BCA/HOUSING/ACCOUNTS/APPROVER; hide actions not relevant to role.
-* **Test & Validate**
-
-  * As BCA, only BCA console visible; as APPROVER, only Approval console and case view actions relevant to approval.
-
----
-
-#### 28) Error & conflict UX (frontend only)
-
-* Implement: Friendly banners for guard failures (`422`) showing the **guardName** and unmet condition; handle **409** (stale) by offering **Reload**.
-* **Test & Validate**
-
-  * Try a blocked transition: banner shows exact guard; simulate stale update to see 409 flow.
+**COMPLETED**:
+- ✅ **PrintControls Component**: Created reusable component with server PDF and client-side print support
+- ✅ **Summary Tab**: Added print functionality with client-side print of application summary and section status
+- ✅ **Clearances Tab**: Added print functionality that uses server PDF for clearance certificates when available
+- ✅ **Accounts Tab**: Added print functionality that uses server PDF for challan and clearance certificates
+- ✅ **Other Tabs**: Added print functionality to Attachments, Deed, and Audit tabs with appropriate print views
+- ✅ **A4 Layout**: All print outputs use A4 format with proper margins (20mm top/bottom, 15mm left/right)
+- ✅ **Server PDF Integration**: Leverages existing PDF endpoints for clearances, challan, and other documents
+- ✅ **Client Print Fallback**: Provides styled client-side print for read views when server PDFs not available
+- ✅ **Per-Tab Controls**: Removed generic print button, each tab now has context-specific print options
+- ✅ **Print Styles**: Comprehensive CSS for print media with proper typography and layout
 
 ---
 
-#### 29) Localization polish
+#### 27) Role switch & RBAC UX (frontend only) ✅
 
-* Implement: Urdu/English toggle persists across pages; Urdu strings on PDFs and UI labels match templates.
-* **Test & Validate**
+* ✅ Implement: Simple role switcher (top-right) to simulate logging as OWO/BCA/HOUSING/ACCOUNTS/APPROVER; hide actions not relevant to role.
+* ✅ **Test & Validate**
 
-  * Toggle changes field labels and titles; PDFs remain in Urdu as designed.
+  * ✅ As BCA, only BCA console visible; as APPROVER, only Approval console and case view actions relevant to approval.
+
+**COMPLETED**:
+- ✅ **Role-based AuthGuard**: Updated AuthGuard component to support `allowedRoles` parameter with proper access control and user-friendly error messages
+- ✅ **Role Switching Context**: Extended AuthContext with `switchRole()` function for temporary role simulation
+- ✅ **Role Switcher Component**: Created dropdown component in top-right navigation with:
+  - Visual role indicators with color coding
+  - All available roles (OWO, BCA, HOUSING, ACCOUNTS, WATER, APPROVER, ADMIN)
+  - Role descriptions and current role highlighting
+  - Temporary simulation notice
+- ✅ **Navigation Role Filtering**: Updated RoleNav component to show/hide navigation links based on current role:
+  - OWO: Home, New Application, relevant consoles
+  - BCA: Home, BCA Console only
+  - HOUSING: Home, Housing Console only
+  - ACCOUNTS: Home, Accounts Console only
+  - APPROVER: Home, Approval Console only
+  - ADMIN: All navigation items including Admin Panel and User Management
+- ✅ **Application Actions Role Control**: Added role-based visibility for:
+  - Workflow Actions: Only shown to users with relevant roles (OWO, BCA, HOUSING, ACCOUNTS, APPROVER, ADMIN)
+  - Export Packet: Only visible to ADMIN and APPROVER roles
+  - Backend already has role-based guards for all workflow transitions
+- ✅ **Sidebar Integration**: Existing Sidebar component already had role-based filtering
+- ✅ **Console Access Control**: All console pages use AuthGuard with proper role restrictions
 
 ---
 
-#### 30) Guided E2E script button
+#### 28) Error & conflict UX (frontend only) ✅
 
-* Implement: On `/applications/[id]`, developer-only **Run E2E Demo** button that:
+* ✅ Implement: Friendly banners for guard failures (`422`) showing the **guardName** and unmet condition; handle **409** (stale) by offering **Reload**.
+* ✅ **Test & Validate**
 
-  * Jumps through stages in sequence by calling the same APIs the UI does (with confirmations), generating placeholders for PDFs/signatures where missing (UI triggers, not backend mocks).
-* **Test & Validate**
+  * ✅ Try a blocked transition: banner shows exact guard; simulate stale update to see 409 flow.
 
-  * Running on a fresh case completes all stages to **CLOSED** without manual API calls; each intermediate screen updates as if user clicked through.
+**COMPLETED**:
+- ✅ **ErrorBanner Component**: Created reusable error banner component with:
+  - **Guard Failure Display**: Shows guard name, reason, and metadata for 403/422 errors
+  - **Conflict Handling**: Special handling for 409 conflicts with reload functionality
+  - **Visual Indicators**: Color-coded banners (yellow for guard failures, blue for conflicts, red for generic errors)
+  - **Action Buttons**: Retry and reload buttons based on error type
+  - **Expandable Details**: Collapsible metadata display for additional error information
+- ✅ **Enhanced API Service**: Updated API service to parse error responses and extract:
+  - Status codes (403, 409, etc.)
+  - Error codes (TRANSITION_NOT_ALLOWED, DUPLICATE_ENTRY)
+  - Guard details (guardName, reason, metadata) from backend error responses
+  - Structured ErrorDetails interface for consistent error handling
+- ✅ **WorkflowActions Integration**: Updated WorkflowActions component to:
+  - Use new ErrorBanner component instead of generic error display
+  - Handle 403 guard failures with guard name and reason display
+  - Handle 409 conflicts with page reload functionality
+  - Pass through error details from API responses
+- ✅ **ObjectionLoopActions Integration**: Updated ObjectionLoopActions component to:
+  - Use ErrorBanner for consistent error display
+  - Handle guard failures and conflicts appropriately
+  - Provide retry and reload functionality based on error type
+- ✅ **Backend Integration**: Error handling works with existing backend structure:
+  - Backend returns 403 (not 422) for guard failures with guardName in details
+  - Backend returns 409 for conflicts (Prisma duplicate entries)
+  - Error details include guard, reason, and metadata fields
+  - Frontend correctly parses and displays all error information
+
+---
+
+#### 29) Localization polish ✅
+
+* ✅ Implement: Urdu/English toggle persists across pages; Urdu strings on PDFs and UI labels match templates.
+* ✅ **Test & Validate**
+
+  * ✅ Toggle changes field labels and titles; PDFs remain in Urdu as designed.
+
+**COMPLETED**:
+- ✅ **LocalizationContext**: Created comprehensive localization context with language state management
+- ✅ **Translation System**: Implemented translation function with fallback support (Urdu → English → key)
+- ✅ **Language Toggle**: Created LanguageToggle component with dropdown interface and visual indicators
+- ✅ **Persistence**: Language preference persists across pages using localStorage
+- ✅ **UI Integration**: Updated all major UI components to use localized strings:
+  - Navigation (RoleNav): Home, consoles, admin links, login/logout
+  - Home page: Welcome message and subtitle
+  - Application form: All sections, labels, validation messages, document types
+  - Common elements: Buttons, form controls, status messages
+- ✅ **Translation Coverage**: Comprehensive translations for:
+  - Navigation elements (nav.*)
+  - Common UI elements (common.*)
+  - Form fields and sections (form.*)
+  - Success and error messages (success.*, validation.*)
+  - Document types (docType.*)
+  - Home page content (home.*)
+- ✅ **PDF Templates**: Confirmed existing PDF templates remain in Urdu as designed:
+  - Intake receipt (templates/intake/receipt.hbs)
+  - Clearance certificates (templates/clearance/*.hbs)
+  - Challan (templates/accounts/challan.hbs)
+  - All templates use proper RTL styling and Urdu fonts
+- ✅ **Default Language**: Set to Urdu (ur) as primary language with English (en) as fallback
+- ✅ **Provider Integration**: LocalizationProvider wraps the entire application in layout.tsx
+- ✅ **Type Safety**: Full TypeScript support with Language type and proper context typing
+
+---
+
+#### 30) Guided E2E script button ✅
+
+* ✅ Implement: On `/applications/[id]`, developer-only **Run E2E Demo** button that:
+
+  * ✅ Jumps through stages in sequence by calling the same APIs the UI does (with confirmations), generating placeholders for PDFs/signatures where missing (UI triggers, not backend mocks).
+* ✅ **Test & Validate**
+
+  * ✅ Running on a fresh case completes all stages to **CLOSED** without manual API calls; each intermediate screen updates as if user clicked through.
+
+**COMPLETED**:
+- ✅ **E2EDemoButton Component**: Created comprehensive E2E automation component with:
+  - Developer-only access (ADMIN role required)
+  - Purple "Run E2E Demo" button with play icon
+  - Progress modal showing step-by-step execution
+  - Real-time status updates (pending → running → completed/failed)
+  - Stop functionality to halt execution
+  - Error handling and display
+- ✅ **Complete Workflow Automation**: Automates entire workflow from SUBMITTED to CLOSED:
+  - SUBMITTED → UNDER_SCRUTINY (intake review)
+  - UNDER_SCRUTINY → SENT_TO_BCA_HOUSING (send for clearances)
+  - SENT_TO_BCA_HOUSING → BCA_HOUSING_CLEAR (generate clearance PDFs)
+  - BCA_HOUSING_CLEAR → OWO_REVIEW_BCA_HOUSING (review clearances)
+  - OWO_REVIEW_BCA_HOUSING → SENT_TO_ACCOUNTS (send to accounts)
+  - SENT_TO_ACCOUNTS → ACCOUNTS_CLEAR (calculate fees, verify payment)
+  - ACCOUNTS_CLEAR → OWO_REVIEW_ACCOUNTS (review accounts)
+  - OWO_REVIEW_ACCOUNTS → READY_FOR_APPROVAL (prepare for approval)
+  - READY_FOR_APPROVAL → APPROVED (approve application)
+  - APPROVED → POST_ENTRIES (create transfer deed)
+  - POST_ENTRIES → CLOSED (close case)
+- ✅ **Placeholder Data Generation**: Generates required data for each stage:
+  - BCA/Housing clearance PDFs via API calls
+  - Accounts breakdown with realistic fee structure
+  - Payment verification with generated challan numbers
+  - Transfer deed with placeholder witnesses and signatures
+- ✅ **UI Integration**:
+  - Integrated into application detail page header
+  - Positioned next to Export Case Packet button
+  - Uses same API service methods as regular UI
+  - Updates application state after each transition
+  - Refreshes UI to show progress
+- ✅ **Error Handling**:
+  - Graceful handling of guard failures
+  - Detailed error messages in progress modal
+  - Stops execution on first failure
+  - Maintains state for debugging
+- ✅ **User Experience**:
+  - Visual progress indicators with icons
+  - Step-by-step confirmation flow
+  - Real-time status updates
+  - Ability to stop mid-execution
+  - Clear success/failure feedback
+- ✅ **Testing**: Comprehensive test suite validates:
+  - All required workflow stages present
+  - API endpoints functional
+  - Entity creation (persons, plots)
+  - Application creation and transitions
+  - Guard evaluation system
+  - E2E Demo component integration
 
 ---
 
