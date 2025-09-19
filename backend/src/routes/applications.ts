@@ -406,7 +406,7 @@ router.get('/search', authenticateToken, asyncHandler(async (req: Request, res: 
  * Get applications with pagination and filtering
  */
 router.get('/', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
-  const { page = '1', limit = '10', stage, stages, status, search, assignedToMe, includeDetails } = req.query;
+  const { page = '1', limit = '10', stage, stages, status, search, assignedToMe, includeDetails, sortBy, sortOrder } = req.query;
 
   const pageNum = parseInt(page as string) || 1;
   const limitNum = parseInt(limit as string) || 10;
@@ -570,13 +570,31 @@ router.get('/', authenticateToken, asyncHandler(async (req: Request, res: Respon
     };
   }
 
+  // Build orderBy object
+  let orderBy: any = { createdAt: 'desc' }; // default sorting
+
+  if (sortBy && sortOrder) {
+    const validSortFields = ['applicationNumber', 'createdAt', 'updatedAt'];
+    const validSortOrders = ['asc', 'desc'];
+
+    if (validSortFields.includes(sortBy as string) && validSortOrders.includes(sortOrder as string)) {
+      if (sortBy === 'applicationNumber') {
+        orderBy = { applicationNumber: sortOrder };
+      } else if (sortBy === 'createdAt') {
+        orderBy = { createdAt: sortOrder };
+      } else if (sortBy === 'updatedAt') {
+        orderBy = { updatedAt: sortOrder };
+      }
+    }
+  }
+
   const [applications, total] = await Promise.all([
     prisma.application.findMany({
       where,
       skip,
       take: limitNum,
       include: includeObj,
-      orderBy: { createdAt: 'desc' }
+      orderBy
     }),
     prisma.application.count({ where })
   ]);
@@ -1023,6 +1041,120 @@ router.delete('/:id/attachments/:attachmentId', authenticateToken, validateParam
   res.json({
     message: 'Attachment deleted successfully',
     attachment: result
+  });
+}));
+
+/**
+ * POST /api/applications/bulk/clearances
+ * Create clearances for multiple applications with per-row error handling
+ */
+router.post('/bulk/clearances', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+  const { applications, sectionId, statusId, remarks } = req.body;
+
+  // Validate input
+  if (!Array.isArray(applications) || applications.length === 0) {
+    throw createError('Applications array is required and cannot be empty', 400, 'INVALID_INPUT');
+  }
+
+  if (!sectionId || !statusId) {
+    throw createError('Section ID and Status ID are required', 400, 'INVALID_INPUT');
+  }
+
+  const results = [];
+
+  // Process each application individually to handle per-row errors
+  for (const applicationId of applications) {
+    try {
+      // Check if application exists
+      const application = await prisma.application.findUnique({
+        where: { id: applicationId },
+        include: {
+          currentStage: true,
+          applicationNumber: true
+        }
+      });
+
+      if (!application) {
+        results.push({
+          applicationId,
+          success: false,
+          error: 'Application not found',
+          code: 'APPLICATION_NOT_FOUND'
+        });
+        continue;
+      }
+
+      // Create clearance with auto-progress logic
+      const result = await createClearance(
+        applicationId,
+        sectionId,
+        statusId,
+        remarks || null,
+        req.user!.id,
+        undefined, // No PDF for bulk operations
+        req.user!.role
+      );
+
+      // Update audit log with IP and user agent
+      await prisma.auditLog.updateMany({
+        where: {
+          applicationId,
+          userId: req.user!.id,
+          action: 'CLEARANCE_CREATED'
+        },
+        data: {
+          ipAddress: req.ip,
+          userAgent: req.get('User-Agent')
+        }
+      });
+
+      // If there was an auto-transition, update its audit log too
+      if (result.autoTransition) {
+        await prisma.auditLog.updateMany({
+          where: {
+            applicationId,
+            userId: req.user!.id,
+            action: 'AUTO_STAGE_TRANSITION'
+          },
+          data: {
+            ipAddress: req.ip,
+            userAgent: req.get('User-Agent')
+          }
+        });
+      }
+
+      results.push({
+        applicationId,
+        applicationNumber: application.applicationNumber,
+        success: true,
+        clearance: result.clearance,
+        autoTransition: result.autoTransition
+      });
+
+    } catch (error: any) {
+      logger.error(`Failed to create clearance for application ${applicationId}:`, error);
+      results.push({
+        applicationId,
+        success: false,
+        error: error.message || 'Unknown error occurred',
+        code: error.code || 'CLEARANCE_CREATION_FAILED'
+      });
+    }
+  }
+
+  // Calculate summary
+  const successful = results.filter(r => r.success).length;
+  const failed = results.filter(r => !r.success).length;
+
+  res.status(200).json({
+    success: true,
+    message: `Bulk clearance operation completed: ${successful} successful, ${failed} failed`,
+    summary: {
+      total: applications.length,
+      successful,
+      failed
+    },
+    results
   });
 }));
 
@@ -1919,6 +2051,26 @@ router.get('/:id/transfer-deed', authenticateToken, validateParams(commonSchemas
  * Get applications that need BCA clearance
  */
 router.get('/bca/pending', authenticateToken, requireRole('BCA', 'ADMIN'), asyncHandler(async (req: Request, res: Response) => {
+  const { sortBy, sortOrder } = req.query;
+
+  // Build orderBy object
+  let orderBy: any = { createdAt: 'asc' }; // default sorting
+
+  if (sortBy && sortOrder) {
+    const validSortFields = ['applicationNumber', 'createdAt', 'updatedAt'];
+    const validSortOrders = ['asc', 'desc'];
+
+    if (validSortFields.includes(sortBy as string) && validSortOrders.includes(sortOrder as string)) {
+      if (sortBy === 'applicationNumber') {
+        orderBy = { applicationNumber: sortOrder };
+      } else if (sortBy === 'createdAt') {
+        orderBy = { createdAt: sortOrder };
+      } else if (sortBy === 'updatedAt') {
+        orderBy = { updatedAt: sortOrder };
+      }
+    }
+  }
+
   // Get applications that are in SENT_TO_BCA_HOUSING stage or have pending BCA clearances
   const applications = await prisma.application.findMany({
     where: {
@@ -1965,7 +2117,7 @@ router.get('/bca/pending', authenticateToken, requireRole('BCA', 'ADMIN'), async
         }
       }
     },
-    orderBy: { createdAt: 'asc' }
+    orderBy
   });
 
   res.json({
@@ -2023,6 +2175,26 @@ router.post('/:id/bca/generate-pdf', authenticateToken, requireRole('BCA', 'ADMI
  * Get applications that need Housing clearance
  */
 router.get('/housing/pending', authenticateToken, requireRole('HOUSING', 'ADMIN'), asyncHandler(async (req: Request, res: Response) => {
+  const { sortBy, sortOrder } = req.query;
+
+  // Build orderBy object
+  let orderBy: any = { createdAt: 'asc' }; // default sorting
+
+  if (sortBy && sortOrder) {
+    const validSortFields = ['applicationNumber', 'createdAt', 'updatedAt'];
+    const validSortOrders = ['asc', 'desc'];
+
+    if (validSortFields.includes(sortBy as string) && validSortOrders.includes(sortOrder as string)) {
+      if (sortBy === 'applicationNumber') {
+        orderBy = { applicationNumber: sortOrder };
+      } else if (sortBy === 'createdAt') {
+        orderBy = { createdAt: sortOrder };
+      } else if (sortBy === 'updatedAt') {
+        orderBy = { updatedAt: sortOrder };
+      }
+    }
+  }
+
   // Get applications that are in SENT_TO_BCA_HOUSING stage or have pending Housing clearances
   const applications = await prisma.application.findMany({
     where: {
@@ -2069,7 +2241,7 @@ router.get('/housing/pending', authenticateToken, requireRole('HOUSING', 'ADMIN'
         }
       }
     },
-    orderBy: { createdAt: 'asc' }
+    orderBy
   });
 
   res.json({
@@ -2435,6 +2607,256 @@ router.get('/:id/packet', authenticateToken, validateParams(commonSchemas.idPara
   } catch (error) {
     logger.error(`Failed to generate case packet for application ${id}:`, error);
     throw createError('Failed to generate case packet', 500, 'PACKET_GENERATION_FAILED');
+  }
+}));
+
+/**
+ * POST /api/applications/demo/insert-data
+ * Insert demo data - create 5-10 applications across various stages (dev-only)
+ */
+router.post('/demo/insert-data', authenticateToken, requireRole('ADMIN'), asyncHandler(async (req: Request, res: Response) => {
+  logger.info('Creating demo applications across various stages');
+
+  try {
+    // Get existing persons and plots
+    const persons = await prisma.person.findMany({ take: 10 });
+    const plots = await prisma.plot.findMany({ take: 10 });
+    const stages = await prisma.wfStage.findMany({ orderBy: { sortOrder: 'asc' } });
+
+    if (persons.length < 4 || plots.length < 5) {
+      throw createError('Insufficient demo data. Need at least 4 persons and 5 plots.', 400, 'INSUFFICIENT_DEMO_DATA');
+    }
+
+    // Define demo applications with different stages
+    const demoApplications = [
+      {
+        sellerId: persons[0].id,
+        buyerId: persons[1].id,
+        plotId: plots[0].id,
+        targetStage: 'SUBMITTED',
+        salePrice: 1500000,
+        transferType: 'SALE',
+        waterNocRequired: false
+      },
+      {
+        sellerId: persons[1].id,
+        buyerId: persons[2].id,
+        plotId: plots[1].id,
+        targetStage: 'UNDER_SCRUTINY',
+        salePrice: 2000000,
+        transferType: 'SALE',
+        waterNocRequired: true
+      },
+      {
+        sellerId: persons[2].id,
+        buyerId: persons[3].id,
+        plotId: plots[2].id,
+        targetStage: 'SENT_TO_BCA_HOUSING',
+        salePrice: 1800000,
+        transferType: 'GIFT',
+        waterNocRequired: false
+      },
+      {
+        sellerId: persons[3].id,
+        buyerId: persons[0].id,
+        plotId: plots[3].id,
+        targetStage: 'BCA_HOUSING_CLEAR',
+        salePrice: 2500000,
+        transferType: 'SALE',
+        waterNocRequired: false
+      },
+      {
+        sellerId: persons[0].id,
+        buyerId: persons[2].id,
+        plotId: plots[4].id,
+        targetStage: 'ACCOUNTS_PENDING',
+        salePrice: 1200000,
+        transferType: 'SALE',
+        waterNocRequired: true
+      }
+    ];
+
+    // Add more applications if we have enough data
+    if (persons.length >= 6 && plots.length >= 8) {
+      demoApplications.push(
+        {
+          sellerId: persons[4].id,
+          buyerId: persons[5].id,
+          plotId: plots[5].id,
+          targetStage: 'AWAITING_PAYMENT',
+          salePrice: 3000000,
+          transferType: 'SALE',
+          waterNocRequired: false
+        },
+        {
+          sellerId: persons[5].id,
+          buyerId: persons[4].id,
+          plotId: plots[6].id,
+          targetStage: 'READY_FOR_APPROVAL',
+          salePrice: 1750000,
+          transferType: 'GIFT',
+          waterNocRequired: false
+        }
+      );
+    }
+
+    if (persons.length >= 8 && plots.length >= 10) {
+      demoApplications.push(
+        {
+          sellerId: persons[6].id,
+          buyerId: persons[7].id,
+          plotId: plots[7].id,
+          targetStage: 'APPROVED',
+          salePrice: 2200000,
+          transferType: 'SALE',
+          waterNocRequired: true
+        },
+        {
+          sellerId: persons[7].id,
+          buyerId: persons[6].id,
+          plotId: plots[8].id,
+          targetStage: 'POST_ENTRIES',
+          salePrice: 1900000,
+          transferType: 'SALE',
+          waterNocRequired: false
+        },
+        {
+          sellerId: persons[8].id,
+          buyerId: persons[9].id,
+          plotId: plots[9].id,
+          targetStage: 'CLOSED',
+          salePrice: 2800000,
+          transferType: 'GIFT',
+          waterNocRequired: false
+        }
+      );
+    }
+
+    const createdApplications = [];
+
+    for (const appData of demoApplications) {
+      // Find target stage
+      const targetStage = stages.find(s => s.code === appData.targetStage);
+      if (!targetStage) {
+        logger.warn(`Target stage ${appData.targetStage} not found, skipping`);
+        continue;
+      }
+
+      // Create application
+      const application = await prisma.application.create({
+        data: {
+          sellerId: appData.sellerId,
+          buyerId: appData.buyerId,
+          plotId: appData.plotId,
+          currentStageId: targetStage.id,
+          waterNocRequired: appData.waterNocRequired,
+          submittedAt: new Date()
+        },
+        include: {
+          seller: true,
+          buyer: true,
+          plot: true,
+          currentStage: true
+        }
+      });
+
+      // Create audit log for application creation
+      await prisma.auditLog.create({
+        data: {
+          applicationId: application.id,
+          userId: req.user!.id,
+          action: 'CREATE_DEMO_APPLICATION',
+          details: `Demo application created in stage ${targetStage.name}`,
+          ipAddress: req.ip,
+          userAgent: req.get('User-Agent')
+        }
+      });
+
+      // Create demo clearances for advanced stages
+      if (['BCA_HOUSING_CLEAR', 'ACCOUNTS_PENDING', 'AWAITING_PAYMENT', 'READY_FOR_APPROVAL', 'APPROVED', 'POST_ENTRIES', 'CLOSED'].includes(appData.targetStage)) {
+        const bcaSection = await prisma.wfSection.findUnique({ where: { code: 'BCA' } });
+        const housingSection = await prisma.wfSection.findUnique({ where: { code: 'HOUSING' } });
+        const clearStatus = await prisma.wfStatus.findUnique({ where: { code: 'CLEAR' } });
+
+        if (bcaSection && housingSection && clearStatus) {
+          // Create BCA clearance
+          await prisma.clearance.create({
+            data: {
+              applicationId: application.id,
+              sectionId: bcaSection.id,
+              statusId: clearStatus.id,
+              remarks: 'Demo BCA clearance - automatically generated',
+              signedPdfUrl: null
+            }
+          });
+
+          // Create Housing clearance
+          await prisma.clearance.create({
+            data: {
+              applicationId: application.id,
+              sectionId: housingSection.id,
+              statusId: clearStatus.id,
+              remarks: 'Demo Housing clearance - automatically generated',
+              signedPdfUrl: null
+            }
+          });
+        }
+      }
+
+      // Create demo accounts breakdown for accounts-related stages
+      if (['ACCOUNTS_PENDING', 'AWAITING_PAYMENT', 'READY_FOR_APPROVAL', 'APPROVED', 'POST_ENTRIES', 'CLOSED'].includes(appData.targetStage)) {
+        const arrears = Math.floor(Math.random() * 50000);
+        const surcharge = Math.floor(Math.random() * 10000);
+        const nonUser = Math.floor(Math.random() * 25000);
+        const transferFee = Math.floor(Math.random() * 15000);
+        const attorneyFee = Math.floor(Math.random() * 5000);
+        const water = Math.floor(Math.random() * 8000);
+        const suiGas = Math.floor(Math.random() * 12000);
+        const additional = Math.floor(Math.random() * 20000);
+        const totalAmount = arrears + surcharge + nonUser + transferFee + attorneyFee + water + suiGas + additional;
+        const paidAmount = ['READY_FOR_APPROVAL', 'APPROVED', 'POST_ENTRIES', 'CLOSED'].includes(appData.targetStage) ? totalAmount : 0;
+
+        await prisma.accountsBreakdown.create({
+          data: {
+            applicationId: application.id,
+            arrears,
+            surcharge,
+            nonUser,
+            transferFee,
+            attorneyFee,
+            water,
+            suiGas,
+            additional,
+            totalAmount,
+            paidAmount,
+            remainingAmount: totalAmount - paidAmount,
+            challanNo: `DEMO-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+            challanDate: new Date()
+          }
+        });
+      }
+
+      createdApplications.push({
+        id: application.id,
+        applicationNo: application.applicationNumber,
+        stage: targetStage.name,
+        seller: application.seller.name,
+        buyer: application.buyer.name,
+        plot: application.plot.plotNumber
+      });
+
+      logger.info(`Created demo application ${application.applicationNumber} in stage ${targetStage.name}`);
+    }
+
+    res.status(201).json({
+      message: 'Demo applications created successfully',
+      applications: createdApplications,
+      count: createdApplications.length
+    });
+
+  } catch (error) {
+    logger.error('Error creating demo applications:', error);
+    throw error;
   }
 }));
 

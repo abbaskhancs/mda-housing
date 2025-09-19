@@ -2103,4 +2103,229 @@ router.get('/:id/packet', auth_1.authenticateToken, (0, validation_1.validatePar
         throw (0, errorHandler_1.createError)('Failed to generate case packet', 500, 'PACKET_GENERATION_FAILED');
     }
 }));
+/**
+ * POST /api/applications/demo/insert-data
+ * Insert demo data - create 5-10 applications across various stages (dev-only)
+ */
+router.post('/demo/insert-data', auth_1.authenticateToken, (0, rbac_1.requireRole)('ADMIN'), (0, errorHandler_1.asyncHandler)(async (req, res) => {
+    logger_1.logger.info('Creating demo applications across various stages');
+    try {
+        // Get existing persons and plots
+        const persons = await prisma.person.findMany({ take: 10 });
+        const plots = await prisma.plot.findMany({ take: 10 });
+        const stages = await prisma.wfStage.findMany({ orderBy: { sortOrder: 'asc' } });
+        if (persons.length < 4 || plots.length < 5) {
+            throw (0, errorHandler_1.createError)('Insufficient demo data. Need at least 4 persons and 5 plots.', 400, 'INSUFFICIENT_DEMO_DATA');
+        }
+        // Define demo applications with different stages
+        const demoApplications = [
+            {
+                sellerId: persons[0].id,
+                buyerId: persons[1].id,
+                plotId: plots[0].id,
+                targetStage: 'SUBMITTED',
+                salePrice: 1500000,
+                transferType: 'SALE',
+                waterNocRequired: false
+            },
+            {
+                sellerId: persons[1].id,
+                buyerId: persons[2].id,
+                plotId: plots[1].id,
+                targetStage: 'UNDER_SCRUTINY',
+                salePrice: 2000000,
+                transferType: 'SALE',
+                waterNocRequired: true
+            },
+            {
+                sellerId: persons[2].id,
+                buyerId: persons[3].id,
+                plotId: plots[2].id,
+                targetStage: 'SENT_TO_BCA_HOUSING',
+                salePrice: 1800000,
+                transferType: 'GIFT',
+                waterNocRequired: false
+            },
+            {
+                sellerId: persons[3].id,
+                buyerId: persons[0].id,
+                plotId: plots[3].id,
+                targetStage: 'BCA_HOUSING_CLEAR',
+                salePrice: 2500000,
+                transferType: 'SALE',
+                waterNocRequired: false
+            },
+            {
+                sellerId: persons[0].id,
+                buyerId: persons[2].id,
+                plotId: plots[4].id,
+                targetStage: 'ACCOUNTS_PENDING',
+                salePrice: 1200000,
+                transferType: 'SALE',
+                waterNocRequired: true
+            }
+        ];
+        // Add more applications if we have enough data
+        if (persons.length >= 6 && plots.length >= 8) {
+            demoApplications.push({
+                sellerId: persons[4].id,
+                buyerId: persons[5].id,
+                plotId: plots[5].id,
+                targetStage: 'AWAITING_PAYMENT',
+                salePrice: 3000000,
+                transferType: 'SALE',
+                waterNocRequired: false
+            }, {
+                sellerId: persons[5].id,
+                buyerId: persons[4].id,
+                plotId: plots[6].id,
+                targetStage: 'READY_FOR_APPROVAL',
+                salePrice: 1750000,
+                transferType: 'GIFT',
+                waterNocRequired: false
+            });
+        }
+        if (persons.length >= 8 && plots.length >= 10) {
+            demoApplications.push({
+                sellerId: persons[6].id,
+                buyerId: persons[7].id,
+                plotId: plots[7].id,
+                targetStage: 'APPROVED',
+                salePrice: 2200000,
+                transferType: 'SALE',
+                waterNocRequired: true
+            }, {
+                sellerId: persons[7].id,
+                buyerId: persons[6].id,
+                plotId: plots[8].id,
+                targetStage: 'POST_ENTRIES',
+                salePrice: 1900000,
+                transferType: 'SALE',
+                waterNocRequired: false
+            }, {
+                sellerId: persons[8].id,
+                buyerId: persons[9].id,
+                plotId: plots[9].id,
+                targetStage: 'CLOSED',
+                salePrice: 2800000,
+                transferType: 'GIFT',
+                waterNocRequired: false
+            });
+        }
+        const createdApplications = [];
+        for (const appData of demoApplications) {
+            // Find target stage
+            const targetStage = stages.find(s => s.code === appData.targetStage);
+            if (!targetStage) {
+                logger_1.logger.warn(`Target stage ${appData.targetStage} not found, skipping`);
+                continue;
+            }
+            // Create application
+            const application = await prisma.application.create({
+                data: {
+                    sellerId: appData.sellerId,
+                    buyerId: appData.buyerId,
+                    plotId: appData.plotId,
+                    currentStageId: targetStage.id,
+                    waterNocRequired: appData.waterNocRequired,
+                    submittedAt: new Date()
+                },
+                include: {
+                    seller: true,
+                    buyer: true,
+                    plot: true,
+                    currentStage: true
+                }
+            });
+            // Create audit log for application creation
+            await prisma.auditLog.create({
+                data: {
+                    applicationId: application.id,
+                    userId: req.user.id,
+                    action: 'CREATE_DEMO_APPLICATION',
+                    details: `Demo application created in stage ${targetStage.name}`,
+                    ipAddress: req.ip,
+                    userAgent: req.get('User-Agent')
+                }
+            });
+            // Create demo clearances for advanced stages
+            if (['BCA_HOUSING_CLEAR', 'ACCOUNTS_PENDING', 'AWAITING_PAYMENT', 'READY_FOR_APPROVAL', 'APPROVED', 'POST_ENTRIES', 'CLOSED'].includes(appData.targetStage)) {
+                const bcaSection = await prisma.wfSection.findUnique({ where: { code: 'BCA' } });
+                const housingSection = await prisma.wfSection.findUnique({ where: { code: 'HOUSING' } });
+                const clearStatus = await prisma.wfStatus.findUnique({ where: { code: 'CLEAR' } });
+                if (bcaSection && housingSection && clearStatus) {
+                    // Create BCA clearance
+                    await prisma.clearance.create({
+                        data: {
+                            applicationId: application.id,
+                            sectionId: bcaSection.id,
+                            statusId: clearStatus.id,
+                            remarks: 'Demo BCA clearance - automatically generated',
+                            signedPdfUrl: null
+                        }
+                    });
+                    // Create Housing clearance
+                    await prisma.clearance.create({
+                        data: {
+                            applicationId: application.id,
+                            sectionId: housingSection.id,
+                            statusId: clearStatus.id,
+                            remarks: 'Demo Housing clearance - automatically generated',
+                            signedPdfUrl: null
+                        }
+                    });
+                }
+            }
+            // Create demo accounts breakdown for accounts-related stages
+            if (['ACCOUNTS_PENDING', 'AWAITING_PAYMENT', 'READY_FOR_APPROVAL', 'APPROVED', 'POST_ENTRIES', 'CLOSED'].includes(appData.targetStage)) {
+                const arrears = Math.floor(Math.random() * 50000);
+                const surcharge = Math.floor(Math.random() * 10000);
+                const nonUser = Math.floor(Math.random() * 25000);
+                const transferFee = Math.floor(Math.random() * 15000);
+                const attorneyFee = Math.floor(Math.random() * 5000);
+                const water = Math.floor(Math.random() * 8000);
+                const suiGas = Math.floor(Math.random() * 12000);
+                const additional = Math.floor(Math.random() * 20000);
+                const totalAmount = arrears + surcharge + nonUser + transferFee + attorneyFee + water + suiGas + additional;
+                const paidAmount = ['READY_FOR_APPROVAL', 'APPROVED', 'POST_ENTRIES', 'CLOSED'].includes(appData.targetStage) ? totalAmount : 0;
+                await prisma.accountsBreakdown.create({
+                    data: {
+                        applicationId: application.id,
+                        arrears,
+                        surcharge,
+                        nonUser,
+                        transferFee,
+                        attorneyFee,
+                        water,
+                        suiGas,
+                        additional,
+                        totalAmount,
+                        paidAmount,
+                        remainingAmount: totalAmount - paidAmount,
+                        challanNo: `DEMO-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+                        challanDate: new Date()
+                    }
+                });
+            }
+            createdApplications.push({
+                id: application.id,
+                applicationNo: application.applicationNumber,
+                stage: targetStage.name,
+                seller: application.seller.name,
+                buyer: application.buyer.name,
+                plot: application.plot.plotNumber
+            });
+            logger_1.logger.info(`Created demo application ${application.applicationNumber} in stage ${targetStage.name}`);
+        }
+        res.status(201).json({
+            message: 'Demo applications created successfully',
+            applications: createdApplications,
+            count: createdApplications.length
+        });
+    }
+    catch (error) {
+        logger_1.logger.error('Error creating demo applications:', error);
+        throw error;
+    }
+}));
 exports.default = router;

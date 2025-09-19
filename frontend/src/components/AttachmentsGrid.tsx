@@ -4,9 +4,16 @@ import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { FileUpload } from './ui/file-upload';
+import { WarningChip } from './ui/warning-chip';
 import { apiService } from '../services/api';
-import { 
-  DocumentTextIcon, 
+import {
+  ALL_DOC_TYPES,
+  getMissingRequiredDocTypes,
+  getDocTypeLabel as getDocTypeLabelFromConstants,
+  isDocTypeRequired
+} from '../constants/documentTypes';
+import {
+  DocumentTextIcon,
   EyeIcon,
   TrashIcon,
   PlusIcon,
@@ -39,21 +46,8 @@ interface AttachmentsGridProps {
   readonly?: boolean;
 }
 
-const DOC_TYPES = [
-  { value: 'AllotmentLetter', label: 'Allotment Letter' },
-  { value: 'PrevTransferDeed', label: 'Previous Transfer Deed' },
-  { value: 'AttorneyDeed', label: 'Attorney Deed' },
-  { value: 'GiftDeed', label: 'Gift Deed' },
-  { value: 'CNIC_Seller', label: 'CNIC - Seller' },
-  { value: 'CNIC_Buyer', label: 'CNIC - Buyer' },
-  { value: 'CNIC_Attorney', label: 'CNIC - Attorney' },
-  { value: 'UtilityBill_Latest', label: 'Latest Utility Bill' },
-  { value: 'NOC_BuiltStructure', label: 'NOC - Built Structure' },
-  { value: 'Photo_Seller', label: 'Photo - Seller' },
-  { value: 'Photo_Buyer', label: 'Photo - Buyer' },
-  { value: 'PrevChallan', label: 'Previous Challan' },
-  { value: 'NOC_Water', label: 'NOC - Water' }
-];
+// Use the centralized document types from constants
+const DOC_TYPES = ALL_DOC_TYPES;
 
 export const AttachmentsGrid: React.FC<AttachmentsGridProps> = ({
   applicationId,
@@ -201,8 +195,7 @@ export const AttachmentsGrid: React.FC<AttachmentsGridProps> = ({
   };
 
   const getDocTypeLabel = (docType: string): string => {
-    const docTypeObj = DOC_TYPES.find(dt => dt.value === docType);
-    return docTypeObj ? docTypeObj.label : docType;
+    return getDocTypeLabelFromConstants(docType);
   };
 
   const openFile = (attachment: Attachment) => {
@@ -214,6 +207,10 @@ export const AttachmentsGrid: React.FC<AttachmentsGridProps> = ({
   const canPreview = (mimeType: string): boolean => {
     return mimeType.startsWith('image/') || mimeType === 'application/pdf';
   };
+
+  // Get missing required document types for coverage check
+  const uploadedDocTypes = attachments.map(att => att.docType);
+  const missingRequiredDocTypes = getMissingRequiredDocTypes(uploadedDocTypes);
 
   if (loading) {
     return (
@@ -248,6 +245,25 @@ export const AttachmentsGrid: React.FC<AttachmentsGridProps> = ({
         </div>
       )}
 
+      {/* Missing Required Documents Warning */}
+      {missingRequiredDocTypes.length > 0 && (
+        <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+          <h4 className="text-sm font-medium text-yellow-800 mb-2">
+            Missing Required Documents
+          </h4>
+          <p className="text-sm text-yellow-700 mb-3">
+            The following required documents are missing. Please upload them to complete the intake process:
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {missingRequiredDocTypes.map((docType) => (
+              <WarningChip key={docType.value} size="sm" variant="warning">
+                {docType.label}
+              </WarningChip>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Add New Attachment Form */}
       {showAddForm && !readonly && (
         <div className="mb-6 p-4 bg-gray-50 rounded-lg border">
@@ -266,7 +282,7 @@ export const AttachmentsGrid: React.FC<AttachmentsGridProps> = ({
                 <option value="">Select document type</option>
                 {DOC_TYPES.map(docType => (
                   <option key={docType.value} value={docType.value}>
-                    {docType.label}
+                    {docType.label} {docType.required ? '(Required)' : '(Optional)'}
                   </option>
                 ))}
               </select>
@@ -355,9 +371,16 @@ export const AttachmentsGrid: React.FC<AttachmentsGridProps> = ({
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <DocumentTextIcon className="h-5 w-5 text-gray-400 mr-2" />
-                      <span className="text-sm font-medium text-gray-900">
-                        {getDocTypeLabel(attachment.docType)}
-                      </span>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium text-gray-900">
+                          {getDocTypeLabel(attachment.docType)}
+                        </span>
+                        {isDocTypeRequired(attachment.docType) && (
+                          <Badge variant="default" className="text-xs mt-1 w-fit">
+                            Required
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">

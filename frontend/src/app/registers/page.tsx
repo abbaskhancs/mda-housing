@@ -2,15 +2,17 @@
 
 import React, { useState, useEffect } from 'react';
 import AuthGuard from "../../components/AuthGuard";
+import DataTable, { Column, SortConfig, PaginationConfig } from "../../components/DataTable";
 import { useAuth } from "../../contexts/AuthContext";
 import { apiService, Application } from "../../services/api";
-import { 
-  DocumentTextIcon, 
-  FunnelIcon, 
+import {
+  DocumentTextIcon,
+  FunnelIcon,
   ArrowDownTrayIcon,
   MagnifyingGlassIcon,
   CalendarIcon,
-  BuildingOfficeIcon
+  BuildingOfficeIcon,
+  EyeIcon
 } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 
@@ -29,8 +31,9 @@ export default function RegistersPage() {
   const [error, setError] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(20);
   const [showFilters, setShowFilters] = useState(false);
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
   const [filters, setFilters] = useState<FilterState>({
     stage: '',
     dateFrom: '',
@@ -67,7 +70,7 @@ export default function RegistersPage() {
 
   useEffect(() => {
     loadApplications();
-  }, [currentPage, filters]);
+  }, [currentPage, pageSize, filters, sortConfig]);
 
   const loadApplications = async () => {
     setLoading(true);
@@ -84,6 +87,10 @@ export default function RegistersPage() {
       if (filters.search) params.search = filters.search;
       if (filters.dateFrom) params.dateFrom = filters.dateFrom;
       if (filters.dateTo) params.dateTo = filters.dateTo;
+      if (sortConfig) {
+        params.sortBy = sortConfig.key;
+        params.sortOrder = sortConfig.direction;
+      }
 
       const response = await apiService.getApplications(params);
 
@@ -114,6 +121,18 @@ export default function RegistersPage() {
       section: ''
     });
     setCurrentPage(1);
+  };
+
+  const handlePaginationChange = (page: number, newPageSize: number) => {
+    setCurrentPage(page);
+    if (newPageSize !== pageSize) {
+      setPageSize(newPageSize);
+    }
+  };
+
+  const handleSortChange = (sort: SortConfig | null) => {
+    setSortConfig(sort);
+    setCurrentPage(1); // Reset to first page when sorting changes
   };
 
   const exportToCSV = () => {
@@ -224,6 +243,100 @@ export default function RegistersPage() {
   };
 
   const totalPages = Math.ceil(total / pageSize);
+
+  const columns: Column<Application>[] = [
+    {
+      key: 'applicationNumber',
+      title: 'Application',
+      sortable: true,
+      render: (value, record) => (
+        <div>
+          <div className="text-sm font-medium text-gray-900">{value}</div>
+          <div className="text-sm text-gray-500">ID: {record.id.slice(-8)}</div>
+        </div>
+      )
+    },
+    {
+      key: 'plot',
+      title: 'Plot Details',
+      render: (value, record) => (
+        <div>
+          <div className="text-sm text-gray-900">Plot {record.plot.plotNumber}</div>
+          <div className="text-sm text-gray-500">{record.plot.sector} • {record.plot.size}</div>
+        </div>
+      )
+    },
+    {
+      key: 'currentOwner',
+      title: 'Current Owner',
+      render: (value, record) => (
+        record.plot.currentOwner ? (
+          <div>
+            <div className="text-sm font-medium text-green-600">{record.plot.currentOwner.name}</div>
+            <div className="text-sm text-gray-500">{record.plot.currentOwner.cnic}</div>
+          </div>
+        ) : (
+          <span className="text-sm text-gray-400">No owner</span>
+        )
+      )
+    },
+    {
+      key: 'parties',
+      title: 'Parties',
+      render: (value, record) => (
+        <div className="space-y-1">
+          <div className="text-xs">
+            <span className="font-medium text-blue-600">Seller:</span> {record.seller.name}
+          </div>
+          <div className="text-xs">
+            <span className="font-medium text-green-600">Buyer:</span> {record.buyer.name}
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'currentStage',
+      title: 'Stage',
+      sortable: true,
+      render: (value, record) => (
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStageColor(record.currentStage.code)}`}>
+          {record.currentStage.name}
+        </span>
+      )
+    },
+    {
+      key: 'createdAt',
+      title: 'Dates',
+      sortable: true,
+      render: (value, record) => (
+        <div className="text-xs text-gray-500">
+          <div><strong>Created:</strong> {new Date(record.createdAt).toLocaleDateString()}</div>
+          <div><strong>Updated:</strong> {new Date(record.updatedAt).toLocaleDateString()}</div>
+        </div>
+      )
+    },
+    {
+      key: 'actions',
+      title: 'Actions',
+      render: (value, record) => (
+        <Link
+          href={`/applications/${record.id}`}
+          className="text-blue-600 hover:text-blue-900 flex items-center"
+        >
+          <EyeIcon className="h-4 w-4 mr-1" />
+          View
+        </Link>
+      )
+    }
+  ];
+
+  const paginationConfig: PaginationConfig = {
+    current: currentPage,
+    pageSize: pageSize,
+    total: total,
+    showSizeChanger: true,
+    pageSizeOptions: [10, 20, 50, 100]
+  };
 
   return (
     <AuthGuard>
@@ -337,160 +450,19 @@ export default function RegistersPage() {
             </div>
           )}
 
-          {/* Results Summary */}
-          <div className="bg-white shadow rounded-lg p-4 mb-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <DocumentTextIcon className="h-5 w-5 text-gray-400 mr-2" />
-                <span className="text-sm text-gray-600">
-                  Showing {applications.length} of {total} applications
-                  {currentPage > 1 && ` (Page ${currentPage} of ${totalPages})`}
-                </span>
-              </div>
-              {totalPages > 1 && (
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                    disabled={currentPage === 1}
-                    className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50"
-                  >
-                    Previous
-                  </button>
-                  <span className="px-3 py-1 text-sm">
-                    {currentPage} / {totalPages}
-                  </span>
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                    disabled={currentPage === totalPages}
-                    className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50"
-                  >
-                    Next
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
+
 
           {/* Applications Table */}
-          <div className="bg-white shadow overflow-hidden sm:rounded-md">
-            {loading ? (
-              <div className="p-6 text-center">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
-                <p className="mt-2 text-sm text-gray-500">Loading applications...</p>
-              </div>
-            ) : error ? (
-              <div className="p-6 text-center">
-                <BuildingOfficeIcon className="h-8 w-8 text-red-400 mx-auto" />
-                <p className="mt-2 text-sm text-red-600">{error}</p>
-                <button
-                  onClick={loadApplications}
-                  className="mt-2 text-sm text-blue-600 hover:text-blue-500 underline"
-                >
-                  Try again
-                </button>
-              </div>
-            ) : applications.length === 0 ? (
-              <div className="p-6 text-center">
-                <DocumentTextIcon className="h-8 w-8 text-gray-400 mx-auto" />
-                <p className="mt-2 text-sm text-gray-500">No applications found</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Application
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Plot Details
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Current Owner
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Parties
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Stage
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Dates
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {applications.map((app) => (
-                      <tr key={app.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">
-                            {app.applicationNumber}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            ID: {app.id.slice(-8)}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
-                            Plot {app.plot.plotNumber}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {app.plot.sector} • {app.plot.size}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {app.plot.currentOwner ? (
-                            <div>
-                              <div className="text-sm font-medium text-green-600">
-                                {app.plot.currentOwner.name}
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                {app.plot.currentOwner.cnic}
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="text-sm text-gray-400 italic">
-                              No current owner
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm text-gray-900">
-                            <div>Seller: {app.seller.name}</div>
-                            <div>Buyer: {app.buyer.name}</div>
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            <div>{app.seller.cnic}</div>
-                            <div>{app.buyer.cnic}</div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStageColor(app.currentStage.code)}`}>
-                            {app.currentStage.name}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          <div>Created: {new Date(app.createdAt).toLocaleDateString()}</div>
-                          <div>Updated: {new Date(app.updatedAt).toLocaleDateString()}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <Link
-                            href={`/applications/${app.id}`}
-                            className="text-blue-600 hover:text-blue-900"
-                          >
-                            View Details
-                          </Link>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+          <DataTable
+            columns={columns}
+            data={applications}
+            loading={loading}
+            pagination={paginationConfig}
+            onPaginationChange={handlePaginationChange}
+            onSortChange={handleSortChange}
+            rowKey="id"
+            emptyText={error ? `Error: ${error}` : "No applications found"}
+          />
         </div>
       </div>
     </AuthGuard>

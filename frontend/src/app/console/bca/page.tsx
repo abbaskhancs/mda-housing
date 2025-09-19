@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { AuthGuard } from '@/components/AuthGuard';
+import DataTable, { Column, SortConfig } from '@/components/DataTable';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -12,7 +13,9 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { FileText, Search, Download, Save, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { api } from '@/services/api';
 import { Application } from '@/types';
-import { toast } from 'sonner';
+import { BulkActionsToolbar, BulkActionType, getBulkActionModalProps } from '@/components/BulkActionsToolbar';
+import { ConfirmationModal } from '@/components/ui/confirmation-modal';
+import { toast } from 'react-hot-toast';
 import { QueueFilters, QueueFilterState } from '@/components/QueueFilters';
 
 export default function BCAConsolePage() {
@@ -31,16 +34,29 @@ export default function BCAConsolePage() {
     myPending: false,
     search: ''
   });
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
 
-  // Load applications on component mount
+  // Bulk action states
+  const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
+  const [selectedRows, setSelectedRows] = useState<Application[]>([]);
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [bulkAction, setBulkAction] = useState<BulkActionType | null>(null);
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
+
+  // Load applications on component mount and when sorting changes
   useEffect(() => {
     loadApplications();
-  }, []);
+  }, [sortConfig]);
 
   const loadApplications = async () => {
     try {
       setIsLoading(true);
-      const response = await api.getBCAPendingApplications();
+      const params: any = {};
+      if (sortConfig) {
+        params.sortBy = sortConfig.key;
+        params.sortOrder = sortConfig.direction;
+      }
+      const response = await api.getBCAPendingApplications(params);
       if (response.success) {
         setApplications(response.data.applications);
       } else {
@@ -93,6 +109,10 @@ export default function BCAConsolePage() {
 
   const handleFiltersChange = (newFilters: QueueFilterState) => {
     setFilters(newFilters);
+  };
+
+  const handleSortChange = (sort: SortConfig | null) => {
+    setSortConfig(sort);
   };
 
   const handleGeneratePdf = async () => {
@@ -196,6 +216,156 @@ export default function BCAConsolePage() {
     }
   };
 
+  // Bulk action handlers
+  const handleSelectionChange = (selectedKeys: string[], selectedRows: Application[]) => {
+    setSelectedRowKeys(selectedKeys);
+    setSelectedRows(selectedRows);
+  };
+
+  const handleBulkAction = (action: BulkActionType) => {
+    setBulkAction(action);
+    setShowBulkModal(true);
+  };
+
+  const handleBulkConfirm = async (remarks?: string) => {
+    if (!bulkAction || selectedRows.length === 0) return;
+
+    setIsBulkProcessing(true);
+    try {
+      // Get section and status IDs
+      const [sectionsResponse, statusesResponse] = await Promise.all([
+        api.get('/api/workflow/sections'),
+        api.get('/api/workflow/statuses')
+      ]);
+
+      if (!sectionsResponse.success || !statusesResponse.success) {
+        throw new Error('Failed to load workflow data');
+      }
+
+      const bcaSection = sectionsResponse.data.sections.find((s: any) => s.code === 'BCA');
+      const status = statusesResponse.data.statuses.find((s: any) => s.code === bulkAction);
+
+      if (!bcaSection || !status) {
+        throw new Error('BCA section or status not found');
+      }
+
+      // Perform bulk operation
+      const response = await api.createBulkClearances(
+        selectedRowKeys,
+        bcaSection.id,
+        status.id,
+        remarks
+      );
+
+      if (response.success) {
+        const { successful, failed, results } = response.data.summary;
+
+        // Show success message
+        toast.success(`Bulk operation completed: ${successful} successful, ${failed} failed`);
+
+        // Show individual failures if any
+        const failures = response.data.results.filter((r: any) => !r.success);
+        if (failures.length > 0) {
+          failures.forEach((failure: any) => {
+            toast.error(`${failure.applicationNumber || failure.applicationId}: ${failure.error}`);
+          });
+        }
+
+        // Reload applications and clear selection
+        await loadApplications();
+        setSelectedRowKeys([]);
+        setSelectedRows([]);
+      } else {
+        throw new Error(response.error || 'Bulk operation failed');
+      }
+    } catch (error: any) {
+      console.error('Bulk operation failed:', error);
+      toast.error(error.message || 'Bulk operation failed');
+    } finally {
+      setIsBulkProcessing(false);
+      setShowBulkModal(false);
+      setBulkAction(null);
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedRowKeys([]);
+    setSelectedRows([]);
+  };
+
+  // Filter applications that can have BCA clearances
+  const selectableRowFilter = (application: Application) => {
+    const status = getBCAStatus(application);
+    return status === 'Pending'; // Only pending applications can be bulk processed
+  };
+
+  // Define table columns
+  const columns: Column<Application>[] = [
+    {
+      key: 'applicationNumber',
+      title: 'Application No.',
+      sortable: true,
+      render: (value, record) => (
+        <div className="font-medium text-blue-600 cursor-pointer hover:text-blue-800"
+             onClick={() => setSelectedApplication(record)}>
+          {value}
+        </div>
+      )
+    },
+    {
+      key: 'seller',
+      title: 'Seller',
+      render: (value) => (
+        <div>
+          <div className="font-medium">{value.name}</div>
+          <div className="text-xs text-gray-500">CNIC: {value.cnic}</div>
+        </div>
+      )
+    },
+    {
+      key: 'buyer',
+      title: 'Buyer',
+      render: (value) => (
+        <div>
+          <div className="font-medium">{value.name}</div>
+          <div className="text-xs text-gray-500">CNIC: {value.cnic}</div>
+        </div>
+      )
+    },
+    {
+      key: 'plot',
+      title: 'Plot',
+      render: (value) => `${value.plotNumber}, ${value.blockNumber}`
+    },
+    {
+      key: 'currentStage',
+      title: 'Stage',
+      render: (value) => (
+        <Badge variant="outline" className="text-xs">
+          {value.name}
+        </Badge>
+      )
+    },
+    {
+      key: 'bcaStatus',
+      title: 'BCA Status',
+      render: (_, record) => {
+        const status = getBCAStatus(record);
+        return (
+          <Badge className={`text-xs ${getBCAStatusColor(record)}`}>
+            {status}
+          </Badge>
+        );
+      }
+    },
+    {
+      key: 'createdAt',
+      title: 'Date',
+      sortable: true,
+      render: (value) => new Date(value).toLocaleDateString()
+    }
+  ];
+
   return (
     <AuthGuard allowedRoles={['BCA', 'ADMIN']}>
       <div className="container mx-auto p-6">
@@ -212,61 +382,42 @@ export default function BCAConsolePage() {
           />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Applications List */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Applications Queue ({filteredApplications.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin" />
-                  <span className="ml-2">Loading applications...</span>
-                </div>
-              ) : (
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {filteredApplications.map((application) => (
-                    <div
-                      key={application.id}
-                      className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                        selectedApplication?.id === application.id
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                      onClick={() => setSelectedApplication(application)}
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <h3 className="font-semibold text-sm">{application.applicationNumber}</h3>
-                        <div className="flex gap-2">
-                          <Badge variant="outline" className="text-xs">
-                            {application.currentStage.name}
-                          </Badge>
-                          <Badge className={`text-xs ${getBCAStatusColor(application)}`}>
-                            BCA: {getBCAStatus(application)}
-                          </Badge>
-                        </div>
-                      </div>
-                      <div className="text-xs text-gray-600 space-y-1">
-                        <div><strong>Seller:</strong> {application.seller.name}</div>
-                        <div><strong>Buyer:</strong> {application.buyer.name}</div>
-                        <div><strong>Plot:</strong> {application.plot.plotNumber}, {application.plot.blockNumber}</div>
-                        <div><strong>Date:</strong> {new Date(application.createdAt).toLocaleDateString()}</div>
-                      </div>
-                    </div>
-                  ))}
-                  {filteredApplications.length === 0 && !isLoading && (
-                    <div className="text-center py-8 text-gray-500">
-                      No applications found
-                    </div>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+        {/* Bulk Actions Toolbar */}
+        <BulkActionsToolbar
+          selectedCount={selectedRowKeys.length}
+          onAction={handleBulkAction}
+          onClearSelection={clearSelection}
+          availableActions={['CLEAR', 'OBJECTION']}
+          disabled={isBulkProcessing}
+        />
+
+        {/* Applications Table */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              BCA Applications Queue ({filteredApplications.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <DataTable
+              columns={columns}
+              data={filteredApplications}
+              loading={isLoading}
+              rowKey="id"
+              onRowClick={setSelectedApplication}
+              selectedRowKey={selectedApplication?.id}
+              multiSelect={true}
+              selectedRowKeys={selectedRowKeys}
+              onSelectionChange={handleSelectionChange}
+              selectableRowFilter={selectableRowFilter}
+              onSortChange={setSortConfig}
+              emptyText="No applications found"
+            />
+          </CardContent>
+        </Card>
+
+        <div className="grid grid-cols-1 gap-6">
 
           {/* Detail Panel */}
           <Card>
@@ -394,6 +545,20 @@ export default function BCAConsolePage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Bulk Action Confirmation Modal */}
+        {bulkAction && (
+          <ConfirmationModal
+            isOpen={showBulkModal}
+            onClose={() => {
+              setShowBulkModal(false);
+              setBulkAction(null);
+            }}
+            onConfirm={handleBulkConfirm}
+            loading={isBulkProcessing}
+            {...getBulkActionModalProps(bulkAction, selectedRowKeys.length)}
+          />
+        )}
       </div>
     </AuthGuard>
   );

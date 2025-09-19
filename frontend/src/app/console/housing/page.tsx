@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
+import { SortConfig } from "../../../components/DataTable";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
@@ -32,16 +33,22 @@ export default function HousingConsolePage() {
     myPending: false,
     search: ''
   });
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
 
-  // Load applications on component mount
+  // Load applications on component mount and when sorting changes
   useEffect(() => {
     loadApplications();
-  }, []);
+  }, [sortConfig]);
 
   const loadApplications = async () => {
     setIsLoading(true);
     try {
-      const response = await api.getHousingPendingApplications();
+      const params: any = {};
+      if (sortConfig) {
+        params.sortBy = sortConfig.key;
+        params.sortOrder = sortConfig.direction;
+      }
+      const response = await api.getHousingPendingApplications(params);
       if (response.success) {
         setApplications(response.data.applications);
       } else {
@@ -94,6 +101,10 @@ export default function HousingConsolePage() {
 
   const handleFiltersChange = (newFilters: QueueFilterState) => {
     setFilters(newFilters);
+  };
+
+  const handleSortChange = (sort: SortConfig | null) => {
+    setSortConfig(sort);
   };
 
   const handleGeneratePdf = async () => {
@@ -214,10 +225,33 @@ export default function HousingConsolePage() {
           {/* Applications List */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Applications Queue</span>
-                <Badge variant="secondary">{filteredApplications.length}</Badge>
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Applications Queue ({filteredApplications.length})
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm">Sort by:</Label>
+                  <select
+                    value={sortConfig ? `${sortConfig.key}-${sortConfig.direction}` : ''}
+                    onChange={(e) => {
+                      if (!e.target.value) {
+                        handleSortChange(null);
+                      } else {
+                        const [key, direction] = e.target.value.split('-');
+                        handleSortChange({ key, direction: direction as 'asc' | 'desc' });
+                      }
+                    }}
+                    className="border border-gray-300 rounded-md px-2 py-1 text-sm"
+                  >
+                    <option value="">Default</option>
+                    <option value="applicationNumber-asc">App No (A-Z)</option>
+                    <option value="applicationNumber-desc">App No (Z-A)</option>
+                    <option value="createdAt-asc">Date (Oldest)</option>
+                    <option value="createdAt-desc">Date (Newest)</option>
+                  </select>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               {isLoading ? (

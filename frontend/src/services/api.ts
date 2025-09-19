@@ -270,6 +270,8 @@ class ApiService {
     dateTo?: string;
     assignedToMe?: boolean;
     includeDetails?: boolean;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
   }): Promise<ApiResponse<{ applications: Application[]; total: number }>> {
     const queryParams = new URLSearchParams();
     if (params?.stage) queryParams.append('stage', params.stage);
@@ -284,9 +286,35 @@ class ApiService {
     if (params?.dateTo) queryParams.append('dateTo', params.dateTo);
     if (params?.assignedToMe) queryParams.append('assignedToMe', 'true');
     if (params?.includeDetails) queryParams.append('includeDetails', 'true');
+    if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
+    if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
 
     const queryString = queryParams.toString();
     return this.get<{ applications: Application[]; total: number }>(`/api/applications${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getBCAPendingApplications(params?: {
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+  }): Promise<ApiResponse<{ applications: Application[] }>> {
+    const queryParams = new URLSearchParams();
+    if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
+    if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
+
+    const queryString = queryParams.toString();
+    return this.get<{ applications: Application[] }>(`/api/applications/bca/pending${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getHousingPendingApplications(params?: {
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+  }): Promise<ApiResponse<{ applications: Application[] }>> {
+    const queryParams = new URLSearchParams();
+    if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
+    if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
+
+    const queryString = queryParams.toString();
+    return this.get<{ applications: Application[] }>(`/api/applications/housing/pending${queryString ? `?${queryString}` : ''}`);
   }
 
   async getApplication(id: string): Promise<ApiResponse<Application>> {
@@ -300,6 +328,15 @@ class ApiService {
       statusId,
       remarks,
       signedPdfUrl
+    });
+  }
+
+  async createBulkClearances(applicationIds: string[], sectionId: string, statusId: string, remarks?: string): Promise<ApiResponse<any>> {
+    return this.post('/api/applications/bulk/clearances', {
+      applications: applicationIds,
+      sectionId,
+      statusId,
+      remarks
     });
   }
 
@@ -406,6 +443,11 @@ class ApiService {
         ...(token && { 'Authorization': `Bearer ${token}` })
       }
     });
+  }
+
+  // Insert demo data (admin only)
+  async insertDemoData(): Promise<ApiResponse<{ applications: any[]; count: number }>> {
+    return this.post('/api/applications/demo/insert-data', {});
   }
 }
 

@@ -1590,3 +1590,62 @@
 {"level":"info","message":"File uploaded successfully: C:\\Abbas\\Coding\\MDA_Housing\\storage\\documents\\1758263751995-e3aa7609500015ca-cmfqgu54c000d1223oiaddq37-housing-clearance-2025-09-19.pdf","service":"mda-housing-api","timestamp":"2025-09-19T06:35:51.997Z"}
 {"level":"info","message":"Document generated successfully: HOUSING_CLEARANCE for application cmfqgu54c000d1223oiaddq37","service":"mda-housing-api","timestamp":"2025-09-19T06:35:52.005Z"}
 {"level":"info","message":"Housing clearance PDF generated for application cmfqgu54c000d1223oiaddq37 by user admin","service":"mda-housing-api","timestamp":"2025-09-19T06:35:52.006Z"}
+{"level":"info","message":"🚀 MDA Housing API server running on port 3001","service":"mda-housing-api","timestamp":"2025-09-19T07:23:23.791Z"}
+{"level":"info","message":"📊 Health check available at http://localhost:3001/health","service":"mda-housing-api","timestamp":"2025-09-19T07:23:23.795Z"}
+{"level":"info","message":"🌍 Environment: development","service":"mda-housing-api","timestamp":"2025-09-19T07:23:23.796Z"}
+{"level":"info","message":"User admin logged in successfully","service":"mda-housing-api","timestamp":"2025-09-19T07:23:55.806Z"}
+{"level":"info","message":"Creating demo applications across various stages","service":"mda-housing-api","timestamp":"2025-09-19T07:23:55.857Z"}
+{"level":"info","message":"Created demo application cmfqik3180003vcsxbnj6zoc4 in stage Submitted","service":"mda-housing-api","timestamp":"2025-09-19T07:23:55.888Z"}
+{"level":"info","message":"Created demo application cmfqik31u0009vcsxjx8bkhk2 in stage Under Scrutiny","service":"mda-housing-api","timestamp":"2025-09-19T07:23:55.905Z"}
+{"level":"info","message":"Created demo application cmfqik32b000fvcsxphfdi1at in stage Sent to BCA & Housing","service":"mda-housing-api","timestamp":"2025-09-19T07:23:55.923Z"}
+{"level":"info","message":"Created demo application cmfqik32t000lvcsxq641g26i in stage BCA & Housing Clear","service":"mda-housing-api","timestamp":"2025-09-19T07:23:55.961Z"}
+{"level":"info","message":"Created demo application cmfqik33v000vvcsxebqk9r2j in stage Accounts Pending","service":"mda-housing-api","timestamp":"2025-09-19T07:23:56.003Z"}
+{"level":"info","message":"Created demo application cmfqik3510017vcsx07mpccee in stage Awaiting Payment","service":"mda-housing-api","timestamp":"2025-09-19T07:23:56.049Z"}
+{"level":"info","message":"Created demo application cmfqik36b001jvcsxd0q8f409 in stage Ready for Approval","service":"mda-housing-api","timestamp":"2025-09-19T07:23:56.089Z"}
+{"level":"info","message":"Created demo application cmfqik37f001vvcsx9q69t43j in stage Approved","service":"mda-housing-api","timestamp":"2025-09-19T07:23:56.131Z"}
+{"level":"info","message":"Created demo application cmfqik38l0027vcsx0srs3k00 in stage Post-Entries","service":"mda-housing-api","timestamp":"2025-09-19T07:23:56.170Z"}
+{"level":"info","message":"Created demo application cmfqik39o002jvcsx74vp2r6t in stage Closed","service":"mda-housing-api","timestamp":"2025-09-19T07:23:56.208Z"}
+{"level":"info","message":"User admin logged in successfully","service":"mda-housing-api","timestamp":"2025-09-19T07:25:08.558Z"}
+{"level":"info","message":"File uploaded successfully: C:\\Abbas\\Coding\\MDA_Housing\\storage\\documents\\1758266713866-b7458268e6a26aa1-cmfqik39o002ivcsx516voa69-bca-clearance-2025-09-19.pdf","service":"mda-housing-api","timestamp":"2025-09-19T07:25:13.871Z"}
+{"level":"info","message":"Document generated successfully: BCA_CLEARANCE for application cmfqik39o002ivcsx516voa69","service":"mda-housing-api","timestamp":"2025-09-19T07:25:13.886Z"}
+{"level":"info","message":"BCA clearance PDF generated for application cmfqik39o002ivcsx516voa69 by user admin","service":"mda-housing-api","timestamp":"2025-09-19T07:25:13.887Z"}
+{"level":"info","message":"File uploaded successfully: C:\\Abbas\\Coding\\MDA_Housing\\storage\\documents\\1758266714740-a2a3e1b3a74c929f-cmfqik39o002ivcsx516voa69-housing-clearance-2025-09-19.pdf","service":"mda-housing-api","timestamp":"2025-09-19T07:25:14.741Z"}
+{"level":"info","message":"Document generated successfully: HOUSING_CLEARANCE for application cmfqik39o002ivcsx516voa69","service":"mda-housing-api","timestamp":"2025-09-19T07:25:14.750Z"}
+{"level":"info","message":"Housing clearance PDF generated for application cmfqik39o002ivcsx516voa69 by user admin","service":"mda-housing-api","timestamp":"2025-09-19T07:25:14.750Z"}
+{"level":"info","message":"File uploaded successfully: C:\\Abbas\\Coding\\MDA_Housing\\storage\\documents\\1758266715577-5f761f77b2ca754c-cmfqik38l0026vcsxbjvdsr3h-bca-clearance-2025-09-19.pdf","service":"mda-housing-api","timestamp":"2025-09-19T07:25:15.578Z"}
+{"level":"info","message":"Document generated successfully: BCA_CLEARANCE for application cmfqik38l0026vcsxbjvdsr3h","service":"mda-housing-api","timestamp":"2025-09-19T07:25:15.586Z"}
+{"level":"info","message":"BCA clearance PDF generated for application cmfqik38l0026vcsxbjvdsr3h by user admin","service":"mda-housing-api","timestamp":"2025-09-19T07:25:15.587Z"}
+{"level":"info","message":"File uploaded successfully: C:\\Abbas\\Coding\\MDA_Housing\\storage\\documents\\1758266716428-90ca7c1d87aacd43-cmfqik38l0026vcsxbjvdsr3h-housing-clearance-2025-09-19.pdf","service":"mda-housing-api","timestamp":"2025-09-19T07:25:16.429Z"}
+{"level":"info","message":"Document generated successfully: HOUSING_CLEARANCE for application cmfqik38l0026vcsxbjvdsr3h","service":"mda-housing-api","timestamp":"2025-09-19T07:25:16.437Z"}
+{"level":"info","message":"Housing clearance PDF generated for application cmfqik38l0026vcsxbjvdsr3h by user admin","service":"mda-housing-api","timestamp":"2025-09-19T07:25:16.438Z"}
+{"level":"info","message":"File uploaded successfully: C:\\Abbas\\Coding\\MDA_Housing\\storage\\documents\\1758266717339-31c01d5a3b6a3295-cmfqik37f001uvcsxelfg8es4-bca-clearance-2025-09-19.pdf","service":"mda-housing-api","timestamp":"2025-09-19T07:25:17.340Z"}
+{"level":"info","message":"Document generated successfully: BCA_CLEARANCE for application cmfqik37f001uvcsxelfg8es4","service":"mda-housing-api","timestamp":"2025-09-19T07:25:17.348Z"}
+{"level":"info","message":"BCA clearance PDF generated for application cmfqik37f001uvcsxelfg8es4 by user admin","service":"mda-housing-api","timestamp":"2025-09-19T07:25:17.349Z"}
+{"level":"info","message":"File uploaded successfully: C:\\Abbas\\Coding\\MDA_Housing\\storage\\documents\\1758266718185-f896d9c525fd3766-cmfqik37f001uvcsxelfg8es4-housing-clearance-2025-09-19.pdf","service":"mda-housing-api","timestamp":"2025-09-19T07:25:18.187Z"}
+{"level":"info","message":"Document generated successfully: HOUSING_CLEARANCE for application cmfqik37f001uvcsxelfg8es4","service":"mda-housing-api","timestamp":"2025-09-19T07:25:18.198Z"}
+{"level":"info","message":"Housing clearance PDF generated for application cmfqik37f001uvcsxelfg8es4 by user admin","service":"mda-housing-api","timestamp":"2025-09-19T07:25:18.199Z"}
+{"level":"info","message":"File uploaded successfully: C:\\Abbas\\Coding\\MDA_Housing\\storage\\documents\\1758266719061-a774b9f8191b4a8e-cmfqik36b001ivcsxrn8fpx0k-bca-clearance-2025-09-19.pdf","service":"mda-housing-api","timestamp":"2025-09-19T07:25:19.066Z"}
+{"level":"info","message":"Document generated successfully: BCA_CLEARANCE for application cmfqik36b001ivcsxrn8fpx0k","service":"mda-housing-api","timestamp":"2025-09-19T07:25:19.075Z"}
+{"level":"info","message":"BCA clearance PDF generated for application cmfqik36b001ivcsxrn8fpx0k by user admin","service":"mda-housing-api","timestamp":"2025-09-19T07:25:19.076Z"}
+{"level":"info","message":"File uploaded successfully: C:\\Abbas\\Coding\\MDA_Housing\\storage\\documents\\1758266719962-d8eae8bc79ba78c6-cmfqik36b001ivcsxrn8fpx0k-housing-clearance-2025-09-19.pdf","service":"mda-housing-api","timestamp":"2025-09-19T07:25:19.964Z"}
+{"level":"info","message":"Document generated successfully: HOUSING_CLEARANCE for application cmfqik36b001ivcsxrn8fpx0k","service":"mda-housing-api","timestamp":"2025-09-19T07:25:19.971Z"}
+{"level":"info","message":"Housing clearance PDF generated for application cmfqik36b001ivcsxrn8fpx0k by user admin","service":"mda-housing-api","timestamp":"2025-09-19T07:25:19.972Z"}
+{"level":"info","message":"File uploaded successfully: C:\\Abbas\\Coding\\MDA_Housing\\storage\\documents\\1758266720826-de6495b0d4d3bb96-cmfqik3510016vcsxj1mj6bm3-bca-clearance-2025-09-19.pdf","service":"mda-housing-api","timestamp":"2025-09-19T07:25:20.827Z"}
+{"level":"info","message":"Document generated successfully: BCA_CLEARANCE for application cmfqik3510016vcsxj1mj6bm3","service":"mda-housing-api","timestamp":"2025-09-19T07:25:20.835Z"}
+{"level":"info","message":"BCA clearance PDF generated for application cmfqik3510016vcsxj1mj6bm3 by user admin","service":"mda-housing-api","timestamp":"2025-09-19T07:25:20.836Z"}
+{"level":"info","message":"File uploaded successfully: C:\\Abbas\\Coding\\MDA_Housing\\storage\\documents\\1758266721661-6cb437cd5439d612-cmfqik3510016vcsxj1mj6bm3-housing-clearance-2025-09-19.pdf","service":"mda-housing-api","timestamp":"2025-09-19T07:25:21.663Z"}
+{"level":"info","message":"Document generated successfully: HOUSING_CLEARANCE for application cmfqik3510016vcsxj1mj6bm3","service":"mda-housing-api","timestamp":"2025-09-19T07:25:21.672Z"}
+{"level":"info","message":"Housing clearance PDF generated for application cmfqik3510016vcsxj1mj6bm3 by user admin","service":"mda-housing-api","timestamp":"2025-09-19T07:25:21.673Z"}
+{"level":"info","message":"User admin logged in successfully","service":"mda-housing-api","timestamp":"2025-09-19T07:25:56.496Z"}
+{"level":"info","message":"Creating demo applications across various stages","service":"mda-housing-api","timestamp":"2025-09-19T07:25:56.504Z"}
+{"level":"info","message":"Created demo application cmfqimo4e003fvcsxr1paw7w3 in stage Submitted","service":"mda-housing-api","timestamp":"2025-09-19T07:25:56.525Z"}
+{"level":"info","message":"Created demo application cmfqimo4v003lvcsx6knrmlw0 in stage Under Scrutiny","service":"mda-housing-api","timestamp":"2025-09-19T07:25:56.543Z"}
+{"level":"info","message":"Created demo application cmfqimo5d003rvcsxhj786fon in stage Sent to BCA & Housing","service":"mda-housing-api","timestamp":"2025-09-19T07:25:56.563Z"}
+{"level":"info","message":"Created demo application cmfqimo5x003xvcsx2afck1p3 in stage BCA & Housing Clear","service":"mda-housing-api","timestamp":"2025-09-19T07:25:56.596Z"}
+{"level":"info","message":"Created demo application cmfqimo6u0047vcsxmoqfs0r6 in stage Accounts Pending","service":"mda-housing-api","timestamp":"2025-09-19T07:25:56.637Z"}
+{"level":"info","message":"Created demo application cmfqimo7z004jvcsxooi0ktl6 in stage Awaiting Payment","service":"mda-housing-api","timestamp":"2025-09-19T07:25:56.680Z"}
+{"level":"info","message":"Created demo application cmfqimo96004vvcsx1s9ww9os in stage Ready for Approval","service":"mda-housing-api","timestamp":"2025-09-19T07:25:56.719Z"}
+{"level":"info","message":"Created demo application cmfqimoa90057vcsx81339vsl in stage Approved","service":"mda-housing-api","timestamp":"2025-09-19T07:25:56.757Z"}
+{"level":"info","message":"Created demo application cmfqimobb005jvcsxl1lhqtjz in stage Post-Entries","service":"mda-housing-api","timestamp":"2025-09-19T07:25:56.794Z"}
+{"level":"info","message":"Created demo application cmfqimocc005vvcsxi0rk0ndy in stage Closed","service":"mda-housing-api","timestamp":"2025-09-19T07:25:56.835Z"}
+{"level":"info","message":"User admin logged in successfully","service":"mda-housing-api","timestamp":"2025-09-19T07:43:29.979Z"}

@@ -22,6 +22,7 @@ import {
 } from "@heroicons/react/24/outline";
 import AccountsTab from "../../../components/AccountsTab";
 import PrintControls, { PrintOption } from "../../../components/PrintControls";
+import { TransitionPreview } from "../../../components/TransitionPreview";
 
 const tabs = [
   { id: 'summary', name: 'Summary', icon: DocumentTextIcon },
@@ -271,7 +272,13 @@ export default function ApplicationDetail() {
                 </div>
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Current Stage</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{application.currentStage.name}</dd>
+                  <dd className="mt-1 flex items-center space-x-2">
+                    <span className="text-sm text-gray-900">{application.currentStage.name}</span>
+                    <TransitionPreview
+                      applicationId={applicationId}
+                      currentStageCode={application.currentStage.code}
+                    />
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Submitted At</dt>
