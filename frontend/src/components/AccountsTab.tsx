@@ -5,6 +5,7 @@ import { CurrencyDollarIcon, DocumentArrowDownIcon } from '@heroicons/react/24/o
 import apiService from '../services/api';
 import { formatCurrency, formatCurrencyInWordsHelper } from '../utils/numberToWords';
 import PrintControls, { PrintOption } from './PrintControls';
+import { CurrencyInput } from './ui/currency-input';
 
 interface FeeHeads {
   arrears: number;
@@ -177,11 +178,10 @@ const AccountsTab: React.FC<AccountsTabProps> = ({ applicationId }) => {
     }
   };
 
-  const handleFeeChange = (field: keyof FeeHeads, value: string) => {
-    const numValue = parseFloat(value) || 0;
+  const handleFeeChange = (field: keyof FeeHeads, value: number) => {
     setFeeHeads(prev => ({
       ...prev,
-      [field]: numValue
+      [field]: value
     }));
   };
 
@@ -317,13 +317,12 @@ const AccountsTab: React.FC<AccountsTabProps> = ({ applicationId }) => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {editing ? (
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
+                        <CurrencyInput
                           value={feeHeads[key as keyof FeeHeads]}
-                          onChange={(e) => handleFeeChange(key as keyof FeeHeads, e.target.value)}
-                          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                          onChange={(value) => handleFeeChange(key as keyof FeeHeads, value)}
+                          min={0}
+                          max={99999999.99}
+                          placeholder="0"
                         />
                       ) : (
                         formatCurrency(parseFloat(accountsBreakdown?.[key as keyof AccountsBreakdown] as string) || 0)

@@ -8,6 +8,7 @@ exports.numberToWordsEnglish = numberToWordsEnglish;
 exports.numberToWordsUrdu = numberToWordsUrdu;
 exports.formatCurrencyInWords = formatCurrencyInWords;
 exports.formatCurrencyInWordsHelper = formatCurrencyInWordsHelper;
+exports.formatCurrency = formatCurrency;
 // English number to words conversion
 const ones = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
 const teens = ['ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
@@ -147,4 +148,14 @@ function formatCurrencyInWords(amount, currency = 'PKR', language = 'ur') {
 // Helper function for templates
 function formatCurrencyInWordsHelper(amount) {
     return formatCurrencyInWords(amount, 'PKR', 'ur');
+}
+// Currency formatting helper for display
+function formatCurrency(amount) {
+    if (!amount)
+        return '₨ 0';
+    return new Intl.NumberFormat('ur-PK', {
+        style: 'currency',
+        currency: 'PKR',
+        minimumFractionDigits: 0
+    }).format(amount);
 }

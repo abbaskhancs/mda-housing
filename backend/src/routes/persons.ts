@@ -60,6 +60,49 @@ router.post('/', authenticateToken, validate(createPersonSchema), asyncHandler(a
 }));
 
 /**
+ * GET /api/persons/search
+ * Search persons by CNIC or name
+ */
+router.get('/search', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+  const { q, limit = '10' } = req.query;
+
+  if (!q || typeof q !== 'string' || q.trim().length < 2) {
+    return res.json({
+      persons: [],
+      message: 'Search query must be at least 2 characters'
+    });
+  }
+
+  const searchTerm = q.trim();
+  const limitNum = parseInt(limit as string) || 10;
+
+  const persons = await prisma.person.findMany({
+    where: {
+      OR: [
+        {
+          cnic: {
+            contains: searchTerm
+          }
+        },
+        {
+          name: {
+            contains: searchTerm
+          }
+        }
+      ]
+    },
+    take: limitNum,
+    orderBy: { name: 'asc' }
+  });
+
+  res.json({
+    persons,
+    searchTerm,
+    total: persons.length
+  });
+}));
+
+/**
  * GET /api/persons
  * Get all persons
  */

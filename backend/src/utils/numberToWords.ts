@@ -151,3 +151,13 @@ export function formatCurrencyInWords(amount: number, currency: string = 'PKR', 
 export function formatCurrencyInWordsHelper(amount: number): string {
   return formatCurrencyInWords(amount, 'PKR', 'ur');
 }
+
+// Currency formatting helper for display
+export function formatCurrency(amount: number): string {
+  if (!amount) return '₨ 0';
+  return new Intl.NumberFormat('ur-PK', {
+    style: 'currency',
+    currency: 'PKR',
+    minimumFractionDigits: 0
+  }).format(amount);
+}

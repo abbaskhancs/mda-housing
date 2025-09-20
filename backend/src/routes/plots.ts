@@ -58,6 +58,54 @@ router.post('/', authenticateToken, validate(createPlotSchema), asyncHandler(asy
 }));
 
 /**
+ * GET /api/plots/search
+ * Search plots by plot number, block, or sector
+ */
+router.get('/search', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+  const { q, limit = '10' } = req.query;
+
+  if (!q || typeof q !== 'string' || q.trim().length < 1) {
+    return res.json({
+      plots: [],
+      message: 'Search query must be at least 1 character'
+    });
+  }
+
+  const searchTerm = q.trim();
+  const limitNum = parseInt(limit as string) || 10;
+
+  const plots = await prisma.plot.findMany({
+    where: {
+      OR: [
+        {
+          plotNumber: {
+            contains: searchTerm
+          }
+        },
+        {
+          blockNumber: {
+            contains: searchTerm
+          }
+        },
+        {
+          sectorNumber: {
+            contains: searchTerm
+          }
+        }
+      ]
+    },
+    take: limitNum,
+    orderBy: { plotNumber: 'asc' }
+  });
+
+  res.json({
+    plots,
+    searchTerm,
+    total: plots.length
+  });
+}));
+
+/**
  * GET /api/plots
  * Get all plots
  */

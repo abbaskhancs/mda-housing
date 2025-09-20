@@ -48,6 +48,30 @@ export interface WorkflowTransition {
   metadata?: any;
 }
 
+export interface Person {
+  id: string;
+  cnic: string;
+  name: string;
+  fatherName?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Plot {
+  id: string;
+  plotNumber: string;
+  blockNumber?: string;
+  sectorNumber?: string;
+  area?: number;
+  location?: string;
+  currentOwnerId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Application {
   id: string;
   applicationNumber: string;
@@ -258,6 +282,22 @@ class ApiService {
     return this.request(`/applications/search?${queryParams.toString()}`);
   }
 
+  async searchPersons(query: string, limit?: number): Promise<ApiResponse<{ persons: Person[]; total: number; searchTerm: string }>> {
+    const queryParams = new URLSearchParams();
+    queryParams.append('q', query);
+    if (limit) queryParams.append('limit', limit.toString());
+
+    return this.request(`/persons/search?${queryParams.toString()}`);
+  }
+
+  async searchPlots(query: string, limit?: number): Promise<ApiResponse<{ plots: Plot[]; total: number; searchTerm: string }>> {
+    const queryParams = new URLSearchParams();
+    queryParams.append('q', query);
+    if (limit) queryParams.append('limit', limit.toString());
+
+    return this.request(`/plots/search?${queryParams.toString()}`);
+  }
+
   // Application methods
   async getApplications(params?: {
     stage?: string;
@@ -414,6 +454,37 @@ class ApiService {
 
   async getTransferDeed(applicationId: string): Promise<ApiResponse<any>> {
     return this.get(`/api/applications/${applicationId}/transfer-deed`);
+  }
+
+  // Person methods
+  async createPerson(personData: {
+    cnic: string;
+    name: string;
+    fatherName?: string;
+    address?: string;
+    phone?: string;
+    email?: string;
+  }): Promise<ApiResponse<{ person: Person; message: string }>> {
+    return this.post('/api/persons', personData);
+  }
+
+  async getPersons(): Promise<ApiResponse<{ persons: Person[] }>> {
+    return this.get('/api/persons');
+  }
+
+  // Plot methods
+  async createPlot(plotData: {
+    plotNumber: string;
+    blockNumber?: string;
+    sectorNumber?: string;
+    area?: number;
+    location?: string;
+  }): Promise<ApiResponse<{ plot: Plot; message: string }>> {
+    return this.post('/api/plots', plotData);
+  }
+
+  async getPlots(): Promise<ApiResponse<{ plots: Plot[] }>> {
+    return this.get('/api/plots');
   }
 
   // Registers export methods

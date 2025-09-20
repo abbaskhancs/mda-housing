@@ -1069,8 +1069,7 @@ router.post('/bulk/clearances', authenticateToken, asyncHandler(async (req: Requ
       const application = await prisma.application.findUnique({
         where: { id: applicationId },
         include: {
-          currentStage: true,
-          applicationNumber: true
+          currentStage: true
         }
       });
 
@@ -2517,10 +2516,10 @@ router.get('/registers/export-pdf', authenticateToken, asyncHandler(async (req: 
 
   if (search) {
     where.OR = [
-      { applicationNumber: { contains: search as string, mode: 'insensitive' } },
-      { plot: { plotNumber: { contains: search as string, mode: 'insensitive' } } },
-      { seller: { cnic: { contains: search as string, mode: 'insensitive' } } },
-      { buyer: { cnic: { contains: search as string, mode: 'insensitive' } } }
+      { applicationNumber: { contains: search as string } },
+      { plot: { plotNumber: { contains: search as string } } },
+      { seller: { cnic: { contains: search as string } } },
+      { buyer: { cnic: { contains: search as string } } }
     ];
   }
 

@@ -407,7 +407,7 @@ router.get('/search', auth_1.authenticateToken, (0, errorHandler_1.asyncHandler)
  * Get applications with pagination and filtering
  */
 router.get('/', auth_1.authenticateToken, (0, errorHandler_1.asyncHandler)(async (req, res) => {
-    const { page = '1', limit = '10', stage, stages, status, search, assignedToMe, includeDetails } = req.query;
+    const { page = '1', limit = '10', stage, stages, status, search, assignedToMe, includeDetails, sortBy, sortOrder } = req.query;
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 10;
     const skip = (pageNum - 1) * limitNum;
@@ -559,13 +559,30 @@ router.get('/', auth_1.authenticateToken, (0, errorHandler_1.asyncHandler)(async
             }
         };
     }
+    // Build orderBy object
+    let orderBy = { createdAt: 'desc' }; // default sorting
+    if (sortBy && sortOrder) {
+        const validSortFields = ['applicationNumber', 'createdAt', 'updatedAt'];
+        const validSortOrders = ['asc', 'desc'];
+        if (validSortFields.includes(sortBy) && validSortOrders.includes(sortOrder)) {
+            if (sortBy === 'applicationNumber') {
+                orderBy = { applicationNumber: sortOrder };
+            }
+            else if (sortBy === 'createdAt') {
+                orderBy = { createdAt: sortOrder };
+            }
+            else if (sortBy === 'updatedAt') {
+                orderBy = { updatedAt: sortOrder };
+            }
+        }
+    }
     const [applications, total] = await Promise.all([
         prisma.application.findMany({
             where,
             skip,
             take: limitNum,
             include: includeObj,
-            orderBy: { createdAt: 'desc' }
+            orderBy
         }),
         prisma.application.count({ where })
     ]);
@@ -948,6 +965,100 @@ router.delete('/:id/attachments/:attachmentId', auth_1.authenticateToken, (0, va
     res.json({
         message: 'Attachment deleted successfully',
         attachment: result
+    });
+}));
+/**
+ * POST /api/applications/bulk/clearances
+ * Create clearances for multiple applications with per-row error handling
+ */
+router.post('/bulk/clearances', auth_1.authenticateToken, (0, errorHandler_1.asyncHandler)(async (req, res) => {
+    const { applications, sectionId, statusId, remarks } = req.body;
+    // Validate input
+    if (!Array.isArray(applications) || applications.length === 0) {
+        throw (0, errorHandler_1.createError)('Applications array is required and cannot be empty', 400, 'INVALID_INPUT');
+    }
+    if (!sectionId || !statusId) {
+        throw (0, errorHandler_1.createError)('Section ID and Status ID are required', 400, 'INVALID_INPUT');
+    }
+    const results = [];
+    // Process each application individually to handle per-row errors
+    for (const applicationId of applications) {
+        try {
+            // Check if application exists
+            const application = await prisma.application.findUnique({
+                where: { id: applicationId },
+                include: {
+                    currentStage: true
+                }
+            });
+            if (!application) {
+                results.push({
+                    applicationId,
+                    success: false,
+                    error: 'Application not found',
+                    code: 'APPLICATION_NOT_FOUND'
+                });
+                continue;
+            }
+            // Create clearance with auto-progress logic
+            const result = await (0, clearanceService_1.createClearance)(applicationId, sectionId, statusId, remarks || null, req.user.id, undefined, // No PDF for bulk operations
+            req.user.role);
+            // Update audit log with IP and user agent
+            await prisma.auditLog.updateMany({
+                where: {
+                    applicationId,
+                    userId: req.user.id,
+                    action: 'CLEARANCE_CREATED'
+                },
+                data: {
+                    ipAddress: req.ip,
+                    userAgent: req.get('User-Agent')
+                }
+            });
+            // If there was an auto-transition, update its audit log too
+            if (result.autoTransition) {
+                await prisma.auditLog.updateMany({
+                    where: {
+                        applicationId,
+                        userId: req.user.id,
+                        action: 'AUTO_STAGE_TRANSITION'
+                    },
+                    data: {
+                        ipAddress: req.ip,
+                        userAgent: req.get('User-Agent')
+                    }
+                });
+            }
+            results.push({
+                applicationId,
+                applicationNumber: application.applicationNumber,
+                success: true,
+                clearance: result.clearance,
+                autoTransition: result.autoTransition
+            });
+        }
+        catch (error) {
+            logger_1.logger.error(`Failed to create clearance for application ${applicationId}:`, error);
+            results.push({
+                applicationId,
+                success: false,
+                error: error.message || 'Unknown error occurred',
+                code: error.code || 'CLEARANCE_CREATION_FAILED'
+            });
+        }
+    }
+    // Calculate summary
+    const successful = results.filter(r => r.success).length;
+    const failed = results.filter(r => !r.success).length;
+    res.status(200).json({
+        success: true,
+        message: `Bulk clearance operation completed: ${successful} successful, ${failed} failed`,
+        summary: {
+            total: applications.length,
+            successful,
+            failed
+        },
+        results
     });
 }));
 /**
@@ -1658,6 +1769,24 @@ router.get('/:id/transfer-deed', auth_1.authenticateToken, (0, validation_1.vali
  * Get applications that need BCA clearance
  */
 router.get('/bca/pending', auth_1.authenticateToken, (0, rbac_1.requireRole)('BCA', 'ADMIN'), (0, errorHandler_1.asyncHandler)(async (req, res) => {
+    const { sortBy, sortOrder } = req.query;
+    // Build orderBy object
+    let orderBy = { createdAt: 'asc' }; // default sorting
+    if (sortBy && sortOrder) {
+        const validSortFields = ['applicationNumber', 'createdAt', 'updatedAt'];
+        const validSortOrders = ['asc', 'desc'];
+        if (validSortFields.includes(sortBy) && validSortOrders.includes(sortOrder)) {
+            if (sortBy === 'applicationNumber') {
+                orderBy = { applicationNumber: sortOrder };
+            }
+            else if (sortBy === 'createdAt') {
+                orderBy = { createdAt: sortOrder };
+            }
+            else if (sortBy === 'updatedAt') {
+                orderBy = { updatedAt: sortOrder };
+            }
+        }
+    }
     // Get applications that are in SENT_TO_BCA_HOUSING stage or have pending BCA clearances
     const applications = await prisma.application.findMany({
         where: {
@@ -1704,7 +1833,7 @@ router.get('/bca/pending', auth_1.authenticateToken, (0, rbac_1.requireRole)('BC
                 }
             }
         },
-        orderBy: { createdAt: 'asc' }
+        orderBy
     });
     res.json({
         applications
@@ -1753,6 +1882,24 @@ router.post('/:id/bca/generate-pdf', auth_1.authenticateToken, (0, rbac_1.requir
  * Get applications that need Housing clearance
  */
 router.get('/housing/pending', auth_1.authenticateToken, (0, rbac_1.requireRole)('HOUSING', 'ADMIN'), (0, errorHandler_1.asyncHandler)(async (req, res) => {
+    const { sortBy, sortOrder } = req.query;
+    // Build orderBy object
+    let orderBy = { createdAt: 'asc' }; // default sorting
+    if (sortBy && sortOrder) {
+        const validSortFields = ['applicationNumber', 'createdAt', 'updatedAt'];
+        const validSortOrders = ['asc', 'desc'];
+        if (validSortFields.includes(sortBy) && validSortOrders.includes(sortOrder)) {
+            if (sortBy === 'applicationNumber') {
+                orderBy = { applicationNumber: sortOrder };
+            }
+            else if (sortBy === 'createdAt') {
+                orderBy = { createdAt: sortOrder };
+            }
+            else if (sortBy === 'updatedAt') {
+                orderBy = { updatedAt: sortOrder };
+            }
+        }
+    }
     // Get applications that are in SENT_TO_BCA_HOUSING stage or have pending Housing clearances
     const applications = await prisma.application.findMany({
         where: {
@@ -1799,7 +1946,7 @@ router.get('/housing/pending', auth_1.authenticateToken, (0, rbac_1.requireRole)
                 }
             }
         },
-        orderBy: { createdAt: 'asc' }
+        orderBy
     });
     res.json({
         applications

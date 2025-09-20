@@ -8,7 +8,9 @@ import SectionStatusPanel from "../../../components/SectionStatusPanel";
 import { AttachmentsGrid } from "../../../components/AttachmentsGrid";
 import { StageTimeline } from "../../../components/StageTimeline";
 import E2EDemoButton from "../../../components/E2EDemoButton";
+import { CaseUpdatedBanner } from "../../../components/ui/case-updated-banner";
 import { useAuth } from "../../../contexts/AuthContext";
+import { useApplicationState } from "../../../hooks/useApplicationState";
 import { apiService } from "../../../services/api";
 import Link from "next/link";
 import {
@@ -33,6 +35,47 @@ const tabs = [
   { id: 'audit', name: 'Audit', icon: ClipboardDocumentListIcon },
 ];
 
+// Helper function to determine if a tab is relevant for the current stage
+const isTabRelevantForStage = (tabId: string, currentStageCode: string): boolean => {
+  const stageRelevance: Record<string, string[]> = {
+    'summary': ['SUBMITTED', 'UNDER_SCRUTINY', 'SENT_TO_BCA_HOUSING', 'BCA_PENDING', 'HOUSING_PENDING', 'BCA_HOUSING_CLEAR', 'OWO_REVIEW_BCA_HOUSING', 'SENT_TO_WATER', 'WATER_PENDING', 'WATER_CLEAR', 'ON_HOLD_WATER', 'SENT_TO_ACCOUNTS', 'ON_HOLD_BCA', 'ON_HOLD_HOUSING', 'ACCOUNTS_PENDING', 'AWAITING_PAYMENT', 'ON_HOLD_ACCOUNTS', 'ACCOUNTS_CLEAR', 'OWO_REVIEW_ACCOUNTS', 'PAYMENT_PENDING', 'READY_FOR_APPROVAL', 'APPROVED', 'POST_ENTRIES', 'REJECTED', 'CLOSED', 'COMPLETED'],
+    'attachments': ['SUBMITTED', 'UNDER_SCRUTINY', 'SENT_TO_BCA_HOUSING', 'BCA_PENDING', 'HOUSING_PENDING', 'BCA_HOUSING_CLEAR', 'OWO_REVIEW_BCA_HOUSING', 'SENT_TO_WATER', 'WATER_PENDING', 'WATER_CLEAR', 'ON_HOLD_WATER', 'SENT_TO_ACCOUNTS', 'ON_HOLD_BCA', 'ON_HOLD_HOUSING', 'ACCOUNTS_PENDING', 'AWAITING_PAYMENT', 'ON_HOLD_ACCOUNTS', 'ACCOUNTS_CLEAR', 'OWO_REVIEW_ACCOUNTS', 'PAYMENT_PENDING', 'READY_FOR_APPROVAL', 'APPROVED', 'POST_ENTRIES', 'REJECTED', 'CLOSED', 'COMPLETED'],
+    'clearances': ['SENT_TO_BCA_HOUSING', 'BCA_PENDING', 'HOUSING_PENDING', 'BCA_HOUSING_CLEAR', 'OWO_REVIEW_BCA_HOUSING', 'SENT_TO_WATER', 'WATER_PENDING', 'WATER_CLEAR', 'ON_HOLD_WATER', 'SENT_TO_ACCOUNTS', 'ON_HOLD_BCA', 'ON_HOLD_HOUSING', 'ACCOUNTS_PENDING', 'AWAITING_PAYMENT', 'ON_HOLD_ACCOUNTS', 'ACCOUNTS_CLEAR', 'OWO_REVIEW_ACCOUNTS', 'PAYMENT_PENDING', 'READY_FOR_APPROVAL', 'APPROVED', 'POST_ENTRIES', 'REJECTED', 'CLOSED', 'COMPLETED'],
+    'accounts': ['SENT_TO_ACCOUNTS', 'ACCOUNTS_PENDING', 'AWAITING_PAYMENT', 'ON_HOLD_ACCOUNTS', 'ACCOUNTS_CLEAR', 'OWO_REVIEW_ACCOUNTS', 'PAYMENT_PENDING', 'READY_FOR_APPROVAL', 'APPROVED', 'POST_ENTRIES', 'REJECTED', 'CLOSED', 'COMPLETED'],
+    'deed': ['READY_FOR_APPROVAL', 'APPROVED', 'POST_ENTRIES', 'REJECTED', 'CLOSED', 'COMPLETED'],
+    'audit': ['SUBMITTED', 'UNDER_SCRUTINY', 'SENT_TO_BCA_HOUSING', 'BCA_PENDING', 'HOUSING_PENDING', 'BCA_HOUSING_CLEAR', 'OWO_REVIEW_BCA_HOUSING', 'SENT_TO_WATER', 'WATER_PENDING', 'WATER_CLEAR', 'ON_HOLD_WATER', 'SENT_TO_ACCOUNTS', 'ON_HOLD_BCA', 'ON_HOLD_HOUSING', 'ACCOUNTS_PENDING', 'AWAITING_PAYMENT', 'ON_HOLD_ACCOUNTS', 'ACCOUNTS_CLEAR', 'OWO_REVIEW_ACCOUNTS', 'PAYMENT_PENDING', 'READY_FOR_APPROVAL', 'APPROVED', 'POST_ENTRIES', 'REJECTED', 'CLOSED', 'COMPLETED']
+  };
+
+  return stageRelevance[tabId]?.includes(currentStageCode) ?? true;
+};
+
+// Helper function to get guidance text for irrelevant tabs
+const getTabGuidanceText = (tabId: string, currentStageCode: string): { title: string; description: string; nextStep: string } => {
+  const guidanceMap: Record<string, { title: string; description: string; nextStep: string }> = {
+    'accounts': {
+      title: 'Accounts Processing Not Yet Available',
+      description: 'The accounts breakdown and fee calculation will be available once the application has been cleared by BCA and Housing departments and sent to the Accounts section.',
+      nextStep: 'Complete BCA and Housing clearances first, then the application will be sent to Accounts for fee calculation.'
+    },
+    'deed': {
+      title: 'Deed Processing Not Yet Available',
+      description: 'The transfer deed will be available once the application has been approved and is ready for final processing.',
+      nextStep: 'Complete all clearances, accounts processing, and approval steps first.'
+    },
+    'clearances': {
+      title: 'Clearances Not Yet Available',
+      description: 'Section clearances will be available once the application has been sent to the relevant departments for review.',
+      nextStep: 'Complete initial scrutiny first, then the application will be sent to BCA and Housing for clearances.'
+    }
+  };
+
+  return guidanceMap[tabId] || {
+    title: 'Feature Not Yet Available',
+    description: 'This section will be available at a later stage in the application process.',
+    nextStep: 'Continue with the current workflow steps.'
+  };
+};
+
 
 
 interface Application {
@@ -42,7 +85,7 @@ interface Application {
   buyer: { name: string; cnic: string };
   attorney?: { name: string; cnic: string };
   plot: { plotNumber: string; sector: string };
-  currentStage: { code: string; name: string };
+  currentStage: { id: string; code: string; name: string };
   status: string;
   submittedAt: string;
   createdAt: string;
@@ -73,11 +116,26 @@ export default function ApplicationDetail() {
 
   const applicationId = params.id as string;
 
+  // State management for detecting changes
+  const {
+    hasStateChanged,
+    storedState,
+    currentState,
+    updateStoredState,
+    checkForChanges,
+    dismissChangeNotification
+  } = useApplicationState({
+    applicationId,
+    onStateChanged: (hasChanged, stored, current) => {
+      console.log('Application state changed:', { hasChanged, stored, current });
+    }
+  });
+
   useEffect(() => {
     loadApplication();
   }, [applicationId]);
 
-  const loadApplication = async () => {
+  const loadApplication = async (skipStateCheck = false) => {
     setLoading(true);
     setError(null);
 
@@ -85,7 +143,24 @@ export default function ApplicationDetail() {
       const response = await apiService.getApplication(applicationId);
 
       if (response.success && response.data) {
-        setApplication(response.data);
+        const appData = response.data;
+        setApplication(appData);
+
+        // Create state data for comparison
+        const stateData = {
+          updatedAt: appData.updatedAt,
+          currentStageId: appData.currentStage.id,
+          currentStageName: appData.currentStage.name,
+          applicationNumber: appData.applicationNumber
+        };
+
+        // Check for changes unless explicitly skipped (e.g., after reload)
+        if (!skipStateCheck) {
+          checkForChanges(stateData);
+        } else {
+          // Update stored state after reload
+          updateStoredState(stateData);
+        }
       } else {
         setError(response.error || 'Failed to load application');
       }
@@ -94,6 +169,18 @@ export default function ApplicationDetail() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Handle successful workflow transitions
+  const handleTransitionSuccess = async () => {
+    // Reload application data and update stored state
+    await loadApplication(true); // Skip state check since we just made the change
+  };
+
+  // Handle reload from banner
+  const handleReloadFromBanner = async () => {
+    await loadApplication(true); // Skip state check and update stored state
+    dismissChangeNotification();
   };
 
   const handleExportPacket = async () => {
@@ -231,6 +318,47 @@ export default function ApplicationDetail() {
   };
 
   const renderTabContent = () => {
+    // Check if the current tab is relevant for the current stage
+    const currentStageCode = application?.currentStage?.code || '';
+    const isTabRelevant = isTabRelevantForStage(activeTab, currentStageCode);
+
+    // If tab is not relevant, show guidance instead of the actual content
+    if (!isTabRelevant && application) {
+      const guidance = getTabGuidanceText(activeTab, currentStageCode);
+      const tabInfo = tabs.find(tab => tab.id === activeTab);
+      const Icon = tabInfo?.icon || DocumentTextIcon;
+
+      return (
+        <div className="bg-white shadow rounded-lg p-6">
+          <div className="text-center py-12">
+            <Icon className="h-16 w-16 mx-auto mb-6 text-gray-300" />
+            <h3 className="text-lg font-medium text-gray-900 mb-4">{guidance.title}</h3>
+            <p className="text-gray-600 mb-6 max-w-2xl mx-auto leading-relaxed">
+              {guidance.description}
+            </p>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-2xl mx-auto">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-blue-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h4 className="text-sm font-medium text-blue-800">Next Step</h4>
+                  <p className="text-sm text-blue-700 mt-1">{guidance.nextStep}</p>
+                </div>
+              </div>
+            </div>
+            <div className="mt-6">
+              <p className="text-sm text-gray-500">
+                Current Stage: <span className="font-medium text-gray-700">{application.currentStage?.name}</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     switch (activeTab) {
       case 'summary':
         if (!application) {
@@ -341,7 +469,7 @@ export default function ApplicationDetail() {
                 <WorkflowActions
                   applicationId={applicationId}
                   currentStage={application.currentStage.code}
-                  onTransition={loadApplication}
+                  onTransition={handleTransitionSuccess}
                 />
               )}
             </div>
@@ -394,7 +522,14 @@ export default function ApplicationDetail() {
         );
 
       case 'accounts':
-        return <AccountsTab applicationId={application.id} />;
+        return application ? <AccountsTab applicationId={application.id} /> : (
+          <div className="bg-white shadow rounded-lg p-6">
+            <div className="text-center py-8 text-gray-500">
+              <CurrencyDollarIcon className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+              <p>Loading application...</p>
+            </div>
+          </div>
+        );
 
       case 'deed':
         return (
@@ -511,7 +646,18 @@ export default function ApplicationDetail() {
 
   return (
     <AuthGuard>
-      <div className="py-6">
+      {/* Case Updated Banner */}
+      <CaseUpdatedBanner
+        isVisible={hasStateChanged}
+        onReload={handleReloadFromBanner}
+        onDismiss={dismissChangeNotification}
+        applicationNumber={application?.applicationNumber}
+        oldStage={storedState?.currentStageName}
+        newStage={currentState?.currentStageName}
+        updatedAt={currentState?.updatedAt}
+      />
+
+      <div className={`py-6 ${hasStateChanged ? 'pt-20' : ''}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
           {/* Header */}
           <div className="mb-6">
@@ -537,7 +683,7 @@ export default function ApplicationDetail() {
                 <E2EDemoButton
                   applicationId={applicationId}
                   currentStage={application.currentStage.code}
-                  onTransition={loadApplication}
+                  onTransition={handleTransitionSuccess}
                 />
 
                 {/* Export Packet - Only show for ADMIN and APPROVER */}

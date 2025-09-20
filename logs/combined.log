@@ -1649,3 +1649,12 @@
 {"level":"info","message":"Created demo application cmfqimobb005jvcsxl1lhqtjz in stage Post-Entries","service":"mda-housing-api","timestamp":"2025-09-19T07:25:56.794Z"}
 {"level":"info","message":"Created demo application cmfqimocc005vvcsxi0rk0ndy in stage Closed","service":"mda-housing-api","timestamp":"2025-09-19T07:25:56.835Z"}
 {"level":"info","message":"User admin logged in successfully","service":"mda-housing-api","timestamp":"2025-09-19T07:43:29.979Z"}
+{"level":"info","message":"🚀 MDA Housing API server running on port 3001","service":"mda-housing-api","timestamp":"2025-09-19T10:27:03.624Z"}
+{"level":"info","message":"📊 Health check available at http://localhost:3001/health","service":"mda-housing-api","timestamp":"2025-09-19T10:27:03.628Z"}
+{"level":"info","message":"🌍 Environment: development","service":"mda-housing-api","timestamp":"2025-09-19T10:27:03.628Z"}
+{"level":"info","message":"🚀 MDA Housing API server running on port 3001","service":"mda-housing-api","timestamp":"2025-09-19T11:20:12.052Z"}
+{"level":"info","message":"📊 Health check available at http://localhost:3001/health","service":"mda-housing-api","timestamp":"2025-09-19T11:20:12.063Z"}
+{"level":"info","message":"🌍 Environment: development","service":"mda-housing-api","timestamp":"2025-09-19T11:20:12.064Z"}
+{"level":"info","message":"🚀 MDA Housing API server running on port 3001","service":"mda-housing-api","timestamp":"2025-09-19T11:20:56.387Z"}
+{"level":"info","message":"📊 Health check available at http://localhost:3001/health","service":"mda-housing-api","timestamp":"2025-09-19T11:20:56.394Z"}
+{"level":"info","message":"🌍 Environment: development","service":"mda-housing-api","timestamp":"2025-09-19T11:20:56.397Z"}
